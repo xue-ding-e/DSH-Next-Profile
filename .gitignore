@@ -1,0 +1,8 @@
+node_modules/
+.output/
+vendor/
+.staging/
+scripts/.output/
+scripts/.work/
+tests/.tmp/
+*.log

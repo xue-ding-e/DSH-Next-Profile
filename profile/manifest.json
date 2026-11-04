@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "plugins": [
+    {
+      "name": "dsh-browser-control",
+      "version": "1.0.1",
+      "source": "plugins/dsh-browser-control",
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-browser-control-1.0.1.tgz",
+      "sha256": "f596b14d9e5c45c66ccb359c1acec52d0276478e4259bb130e9d85419a3544d2"
+    },
+    {
+      "name": "dsh-nav-buttons",
+      "version": "1.0.1",
+      "source": "plugins/dsh-nav-buttons",
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-nav-buttons-1.0.1.tgz",
+      "sha256": "969ed1328bb5ebbd99c6c16d49797fb07eb9407cb5a0dd14dcd815483850e973"
+    },
+    {
+      "name": "dsh-input-guard",
+      "version": "1.0.1",
+      "source": "plugins/dsh-input-guard",
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-input-guard-1.0.1.tgz",
+      "sha256": "671b595bc1773a62b8368a7d4f1a8f38f934a4ee942cbd9f897289431ae72268"
+    },
+    {
+      "name": "dsh-whale-boot",
+      "version": "1.0.1",
+      "source": "plugins/dsh-whale-boot",
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-whale-boot-1.0.1.tgz",
+      "sha256": "2e75aae592fade67d0e64f2eeec5d5c68f3bb74d3d1950f229204477994ee728"
+    },
+    {
+      "name": "dsh-bsk-bridge",
+      "version": "0.1.2",
+      "source": "plugins/dsh-bsk-bridge",
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-bsk-bridge-0.1.2.tgz",
+      "sha256": "449f1aff3f7eeeec72dfb1c7118246f65a221ffba0c9e3ea72c78a51a2e9b007"
+    },
+    {
+      "name": "dsh-retry-tuning",
+      "version": "1.0.1",
+      "source": "plugins/dsh-retry-tuning",
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-retry-tuning-1.0.1.tgz",
+      "sha256": "25401e3a718a8d3d80af55a47b070dacc6428328e537eba5f7b47b20aa995b3f"
+    },
+    {
+      "name": "dsh-plugin-subscriptions",
+      "version": "0.9.13",
+      "source": "plugins/dsh-plugin-subscriptions",
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-plugin-subscriptions-0.9.13.tgz",
+      "sha256": "7ba1ba1fdc52c2c7d92b7f1adb88421eed2fa8a1f4f6352cc27bc623978bbb29"
+    },
+    {
+      "name": "dsh-qoder-connect",
+      "version": "0.6.1",
+      "source": "plugins/dsh-qoder-connect",
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-qoder-connect-0.6.1.tgz",
+      "sha256": "9a20784e8ad29b3ff19ed7da63c5d7e0d2f439bc0fa7249eeeba9fd14c489cd8"
+    },
+    {
+      "name": "dsh-chat-import",
+      "version": "0.26.4-fix.2",
+      "source": "plugins/dsh-chat-import",
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-chat-import-0.26.4-fix.2.tgz",
+      "sha256": "a9ba0a15b11c694d4f4c255a26bcea1f4e92bb4b428117e83355c29b50de2564"
+    }
+  ],
+  "compatibility": {
+    "path": "profile/compatibility.json",
+    "sha256": "b56f2fa97847e8575dae58221420e2305cb6e9d7fb20bf35449b08b286aa05bd"
+  }
+}

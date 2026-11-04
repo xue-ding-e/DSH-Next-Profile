@@ -1,0 +1,45 @@
+name: Prepare installer release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '26.13.0'
+          package-manager-cache: false
+      - name: Test installer behavior
+        run: node --test tests/*.test.mjs
+      - name: Verify thin package inputs
+        run: node scripts/smoke-package.mjs --directory .
+      - name: Assemble full installer from locked public plugin assets
+        run: node scripts/build-release.mjs --manifest profile/manifest.json --compatibility profile/compatibility.json --output .output/full
+      - name: Pack thin installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path .output/thin | Out-Null
+          npm pack --ignore-scripts --json --pack-destination .output/thin
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: installer-release-candidate
+          if-no-files-found: error
+          path: |
+            .output/full/*.zip
+            .output/full/*.tgz
+            .output/full/SHA256SUMS
+            .output/thin/*.tgz
+            profile/manifest.json
+            profile/compatibility.json
