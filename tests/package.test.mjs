@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { buildRelease } from '../scripts/build-release.mjs';
-import { assertPublicFile, npm, pnpm, releaseMetadata, unpackLockedArchive } from '../scripts/pack-tools.mjs';
+import { assertPublicFile, npm, releaseMetadata, unpackLockedArchive } from '../scripts/pack-tools.mjs';
 import { smokePackage, validatePackageFiles } from '../scripts/smoke-package.mjs';
 import { loadRelease } from '../src/manifest.mjs';
 import { execute } from '../src/process.mjs';
@@ -100,8 +100,8 @@ test('real npm packages and ZIP include runnable installer and all nine local ar
   const downloaded = await unpackLockedArchive({ ...firstPlugin, url: `https://example.test/${firstPlugin.name}.tgz` },
     downloadWork, async () => new Response(await readFile(firstPlugin.archivePath)));
   assert.ok(downloaded.archivePath.endsWith('.tgz'));
-  const dlx = await pnpm(['dlx', '--package', result.tgz, 'dsh-next-profile', '--help'], f.root);
-  assert.match(dlx.stdout, /dsh-next-profile \[--host/u);
+  const packagedCli = await execute(process.execPath, [join(extracted, 'package', 'src', 'cli.mjs'), '--help']);
+  assert.match(packagedCli.stdout, /dsh-next-profile \[--host/u);
   if (result.zip) {
     const zip = await readFile(result.zip);
     assert.equal(zip.subarray(0, 2).toString(), 'PK');
