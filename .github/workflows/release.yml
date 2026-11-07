@@ -33,7 +33,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path .output/thin | Out-Null
-          pnpm pack --json --pack-destination .output/thin
+          npm pack --ignore-scripts --json --pack-destination .output/thin
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v7.0.2
         with:

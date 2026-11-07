@@ -14,7 +14,7 @@
 
 ## 在新电脑安装
 
-1. 要复现源码功能，请安装 **DSH Next**；官方 DeepSeek Harness 可安装外置插件子集。安装后完全退出应用，包括托盘中的进程，只关窗口可能仍在后台运行。0.2.3 CLI 通过安装包自带的初始化函数创建空白 Profile；不完整的既有 Profile 仍需先打开客户端恢复。
+1. 要复现源码功能，请安装 **DSH Next**；官方 DeepSeek Harness 可安装外置插件子集。安装后完全退出应用，包括托盘中的进程，只关窗口可能仍在后台运行。0.2.4 CLI 通过安装包自带的初始化函数创建空白 Profile；不完整的既有 Profile 仍需先打开客户端恢复。
 2. 从本仓库 Releases 下载 Windows ZIP，完整解压到本地目录。`Install.cmd`、`installer/`、`src/`、`profile/`、`artifacts/` 必须放在一起，不要在压缩包预览窗口中直接运行。
 3. 双击 `Install.cmd`。9 个插件 tgz 已随包附带，普通运行依赖仍可能需要从 npm registry 下载，因此安装时可能需要网络。
 4. 出现已核对 9 个依赖和 9 个 bundle 的提示后，重新启动所选客户端。登录、PAT、OAuth、浏览器绑定和视频资源需按下表单独配置。
@@ -59,12 +59,12 @@ pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/down
 
 请按实际发布版本替换下载 URL，并用 `--host original` 或 `--host next` 选择宿主。CLI 还支持 `--app-dir`、`--home`、`--manifest`、`--check` 和 `--dry-run`。tgz 可附带本地插件归档，也可使用精确的公开 URL/SHA-256 锁，在安装时匿名下载并验哈希。ZIP 方式只使用应用内置工具。GitHub 自动生成的源码压缩包不是预构建 Windows 安装包。
 
-0.2.3 构建新增 `install`、`check`、`doctor` 和 `features` 命令。发布前可将构建的 tgz 复制到新电脑并使用本地路径；发布后，同一 `--package` 参数可改为不可变的 Release URL：
+0.2.4 构建新增 `install`、`check`、`doctor` 和 `features` 命令。发布前可将构建的 tgz 复制到新电脑并使用本地路径；发布后，同一 `--package` 参数可改为不可变的 Release URL：
 
 ```powershell
-pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.3.tgz" dsh-next-profile install --host next --match-baseline
-pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.3.tgz" dsh-next-profile doctor --host next --match-baseline --json
-pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.3.tgz" dsh-next-profile features --json
+pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.4.tgz" dsh-next-profile install --host next --match-baseline
+pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.4.tgz" dsh-next-profile doctor --host next --match-baseline --json
+pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.4.tgz" dsh-next-profile features --json
 ```
 
 `profile/manifest.json` 除插件版本和 SHA-256 外，还记录精确的骨架基线。`--match-baseline` 在写 Profile 前拒绝宿主种类、运行时版本或安装版应用版本不一致的情况；`doctor` 在包状态旁报告 `baselineMatches`。这锁定安装的代码，不复制账号、浏览器身份、会话或外观偏好。新电脑的 OAuth/PAT 授权、BSK 安装与绑定、本地视频仍按上表配置。
@@ -125,7 +125,7 @@ node scripts/smoke-package.mjs --directory .output/full-v0.1.0/package
 
 每次使用新的输出目录，已存在的 `package/` 会被拒绝，避免混入旧产物。Windows 通过系统 PowerShell/.NET 生成 ZIP；其他平台需要 `zip` 命令，也可用 `--no-zip` 只生成 tgz。不传 `--sources` 时，构建器从 URL 锁下载，用系统 `tar` 检查并解包后才接收产物，无需额外 Node 依赖。全部 URL 和哈希公开发布后，可在仓库根运行 `pnpm pack` 生成薄包，prepack 会验证所需文件与版本锁。
 
-构建脚本内部使用 npm 的维护版 packlist 整理插件归档，删除开发依赖和全部插件生命周期脚本，并保留运行依赖与许可证；终端用户和 CI 使用 pnpm 打包 Profile。下载的 tgz 必须预先构建并去掉脚本、开发依赖。遇到不可移植依赖、缺失构建入口、patch 或许可证、个人账号及浏览器文件、旧磁盘绝对路径、可识别密钥格式、旧 BSK 浏览器绑定时停止打包。下载归档若包含链接、特殊文件或重复路径也会被拒绝。自动检查只能拒绝已知问题，发布前维护者仍应审查插件内容。
+构建脚本内部使用 npm 的维护版 packlist 整理插件归档，删除开发依赖和全部插件生命周期脚本，并保留运行依赖与许可证；终端用户使用 pnpm 的 `dlx`，CI 发布任务使用受控的 npm pack 步骤生成薄归档。下载的 tgz 必须预先构建并去掉脚本、开发依赖。遇到不可移植依赖、缺失构建入口、patch 或许可证、个人账号及浏览器文件、旧磁盘绝对路径、可识别密钥格式、旧 BSK 浏览器绑定时停止打包。下载归档若包含链接、特殊文件或重复路径也会被拒绝。自动检查只能拒绝已知问题，发布前维护者仍应审查插件内容。
 
 若还需精确拒绝指定密钥，可通过 `DSH_PROFILE_DENY_SECRETS_FILE` 指向仓库外的私有 JSON 文件，内容是密钥字符串数组。构建器按字节查找，命中即拒绝且不打印密钥值；文件及内容不会复制到产物。密钥回归测试仅使用合成值。根 MIT 许可证仅覆盖安装器代码，各插件归档保留各自上游许可证。
 
