@@ -58,7 +58,7 @@ jobs:
             'profile/manifest.json', 'profile/compatibility.json', 'profile/feature-matrix.json' -Destination $releaseDir
           $assets = @(Get-ChildItem -LiteralPath $releaseDir -File | ForEach-Object { $_.FullName })
           if ($assets.Count -lt 7) { throw "Expected release assets are missing from $releaseDir" }
-          gh release create $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY `
+          gh release create $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA `
             --title "DSH Next Profile $env:GITHUB_REF_NAME" `
             --notes "Automated DSH Next Profile release from $env:GITHUB_SHA. Verify SHA256SUMS before installation."
           gh release upload $env:GITHUB_REF_NAME @assets --repo $env:GITHUB_REPOSITORY
