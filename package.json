@@ -1,6 +1,6 @@
 {
   "name": "dsh-next-profile",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "A thin version lock and installer for personal extensions on DeepSeek Harness and DSH Next.",
   "type": "module",
   "license": "MIT",

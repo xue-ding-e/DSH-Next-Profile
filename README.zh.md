@@ -14,7 +14,7 @@
 
 ## 在新电脑安装
 
-1. 要复现源码功能，请安装 **DSH Next**；官方 DeepSeek Harness 可安装外置插件子集。安装后完全退出应用，包括托盘中的进程，只关窗口可能仍在后台运行。0.2.8 CLI 通过安装包自带的初始化函数创建空白 Profile；不完整的既有 Profile 仍需先打开客户端恢复。
+1. 要复现源码功能，请安装 **DSH Next**；官方 DeepSeek Harness 可安装外置插件子集。安装后完全退出应用，包括托盘中的进程，只关窗口可能仍在后台运行。0.2.9 CLI 通过安装包自带的初始化函数创建空白 Profile；不完整的既有 Profile 仍需先打开客户端恢复。
 2. 从本仓库 Releases 下载 Windows ZIP，完整解压到本地目录。`Install.cmd`、`installer/`、`src/`、`profile/`、`artifacts/` 必须放在一起，不要在压缩包预览窗口中直接运行。
 3. 双击 `Install.cmd`。9 个插件 tgz 已随包附带，普通运行依赖仍可能需要从 npm registry 下载，因此安装时可能需要网络。
 4. 出现已核对 9 个依赖和 9 个 bundle 的提示后，重新启动所选客户端。登录、PAT、OAuth、浏览器绑定和视频资源需按下表单独配置。
@@ -59,13 +59,13 @@ pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/down
 
 请按实际发布版本替换下载 URL，并用 `--host original` 或 `--host next` 选择宿主。CLI 还支持 `--app-dir`、`--home`、`--manifest`、`--check` 和 `--dry-run`。tgz 可附带本地插件归档，也可使用精确的公开 URL/SHA-256 锁，在安装时匿名下载并验哈希。ZIP 方式只使用应用内置工具。GitHub 自动生成的源码压缩包不是预构建 Windows 安装包。
 
-0.2.8 构建新增 `install`、`check`、`doctor` 和 `features` 命令。发布前可将构建的 tgz 复制到新电脑并使用本地路径；发布后，同一 `--package` 参数可改为不可变的 Release URL：
+0.2.9 构建新增 `install`、`check`、`doctor` 和 `features` 命令。CI 创建正式 Release 后，匹配的 DSH Next 安装可以使用下面的一键安装命令：
 
 ```powershell
-pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.8.tgz" dsh-next-profile install --host next --match-baseline
-pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.8.tgz" dsh-next-profile doctor --host next --match-baseline --json
-pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.8.tgz" dsh-next-profile features --json
+pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.2.9/dsh-next-profile-0.2.9.tgz" dsh-next-profile install --host next --match-baseline
 ```
+
+发布前可将 URL 换成 `C:\Downloads\dsh-next-profile-0.2.9.tgz` 来验证本地构建包。使用同一个 URL 加上 `doctor --host next --match-baseline --json` 可读取已停止或正在运行的安装状态；加上 `features --json` 可在不启动 Desktop、不访问网络的情况下读取功能归属。
 
 `profile/manifest.json` 除插件版本和 SHA-256 外，还记录精确的骨架基线。`--match-baseline` 在写 Profile 前拒绝宿主种类、运行时版本或安装版应用版本不一致的情况；`doctor` 在包状态旁报告 `baselineMatches`。这锁定安装的代码，不复制账号、浏览器身份、会话或外观偏好。新电脑的 OAuth/PAT 授权、BSK 安装与绑定、本地视频仍按上表配置。
 

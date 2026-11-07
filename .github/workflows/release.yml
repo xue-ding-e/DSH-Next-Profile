@@ -49,16 +49,37 @@ jobs:
             profile/feature-matrix.json
       - name: Create GitHub Release
         shell: pwsh
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           RELEASE_DIR: .output/release
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           $releaseDir = $env:RELEASE_DIR
           New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-          Copy-Item -Path '.output/full/*.zip', '.output/full/*.tgz', '.output/full/SHA256SUMS', '.output/thin/*.tgz',
-            'profile/manifest.json', 'profile/compatibility.json', 'profile/feature-matrix.json' -Destination $releaseDir
-          $assets = @(Get-ChildItem -LiteralPath $releaseDir -File)
-          if ($assets.Count -lt 7) { throw "Expected release assets are missing from $releaseDir" }
+          $packageVersion = (Get-Content -Raw -LiteralPath 'package.json' | ConvertFrom-Json).version
+          if ("v$packageVersion" -ne $env:GITHUB_REF_NAME) {
+            throw "Release tag $env:GITHUB_REF_NAME does not match package version $packageVersion"
+          }
+          $fullFiles = @(Get-ChildItem -File -LiteralPath '.output/full' | Where-Object { $_.Extension -in @('.zip', '.tgz') })
+          $thinFiles = @(Get-ChildItem -File -LiteralPath '.output/thin' | Where-Object { $_.Extension -eq '.tgz' })
+          if ($fullFiles.Count -ne 2 -or $thinFiles.Count -ne 1) {
+            throw "Expected one full ZIP, one full tgz and one thin tgz; found full=$($fullFiles.Count), thin=$($thinFiles.Count)"
+          }
+          $copyPlan = @(
+            $fullFiles | ForEach-Object { [pscustomobject]@{ Source = $_.FullName; AssetName = $_.Name } }
+            [pscustomobject]@{ Source = (Get-Item -LiteralPath '.output/full/SHA256SUMS').FullName; AssetName = 'SHA256SUMS' }
+            $thinFiles | ForEach-Object { [pscustomobject]@{ Source = $_.FullName; AssetName = "$($_.BaseName)-thin$($_.Extension)" } }
+            [pscustomobject]@{ Source = (Get-Item -LiteralPath 'profile/manifest.json').FullName; AssetName = 'manifest.json' }
+            [pscustomobject]@{ Source = (Get-Item -LiteralPath 'profile/compatibility.json').FullName; AssetName = 'compatibility.json' }
+            [pscustomobject]@{ Source = (Get-Item -LiteralPath 'profile/feature-matrix.json').FullName; AssetName = 'feature-matrix.json' }
+          )
+          foreach ($item in $copyPlan) {
+            Copy-Item -LiteralPath $item.Source -Destination (Join-Path $releaseDir $item.AssetName)
+          }
+          $assets = @(Get-ChildItem -LiteralPath $releaseDir -File | Sort-Object Name)
+          if ($assets.Count -ne $copyPlan.Count -or (@($copyPlan.AssetName | Sort-Object -Unique).Count -ne $copyPlan.Count) -or (@($assets.Name | Sort-Object -Unique).Count -ne $assets.Count)) {
+            throw "Release asset names are incomplete or duplicated in $releaseDir"
+          }
           $headers = @{
             Accept = 'application/vnd.github+json'
             Authorization = "Bearer $env:GITHUB_TOKEN"
