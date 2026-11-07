@@ -48,40 +48,35 @@ jobs:
             profile/compatibility.json
             profile/feature-matrix.json
       - name: Create GitHub Release
-        uses: actions/github-script@v7.0.1
+        shell: pwsh
         env:
           RELEASE_DIR: .output/release
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            const fs = require('node:fs')
-            const path = require('node:path')
-            const files = directory => fs.readdirSync(directory).map(name => path.join(directory, name))
-              .filter(file => fs.statSync(file).isFile())
-            const releaseDir = process.env.RELEASE_DIR
-            fs.mkdirSync(releaseDir, { recursive: true })
-            for (const source of [
-              ...files('.output/full').filter(file => /\.(?:zip|tgz)$/u.test(file)),
-              '.output/full/SHA256SUMS',
-              ...files('.output/thin').filter(file => /\.tgz$/u.test(file)),
-              'profile/manifest.json',
-              'profile/compatibility.json',
-              'profile/feature-matrix.json',
-            ]) fs.copyFileSync(source, path.join(releaseDir, path.basename(source)))
-            const assets = fs.readdirSync(releaseDir).filter(name => fs.statSync(path.join(releaseDir, name)).isFile())
-            if (assets.length < 7) throw new Error(`Expected release assets are missing from ${releaseDir}`)
-            const { owner, repo } = context.repo
-            const release = await github.rest.repos.createRelease({
-              owner, repo, tag_name: context.ref.replace('refs/tags/', ''), target_commitish: context.sha,
-              name: `DSH Next Profile ${context.ref.replace('refs/tags/', '')}`,
-              body: `Automated DSH Next Profile release from ${context.sha}. Verify SHA256SUMS before installation.`,
-              draft: false, prerelease: false,
-            })
-            for (const name of assets) {
-              const data = fs.readFileSync(path.join(releaseDir, name))
-              await github.rest.repos.uploadReleaseAsset({
-                owner, repo, release_id: release.data.id, name, data,
-                headers: { 'content-type': 'application/octet-stream', 'content-length': data.length },
-              })
-            }
-            core.info(`Created ${release.data.html_url} with ${assets.length} assets.`)
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $releaseDir = $env:RELEASE_DIR
+          New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+          Copy-Item -Path '.output/full/*.zip', '.output/full/*.tgz', '.output/full/SHA256SUMS', '.output/thin/*.tgz',
+            'profile/manifest.json', 'profile/compatibility.json', 'profile/feature-matrix.json' -Destination $releaseDir
+          $assets = @(Get-ChildItem -LiteralPath $releaseDir -File)
+          if ($assets.Count -lt 7) { throw "Expected release assets are missing from $releaseDir" }
+          $headers = @{
+            Accept = 'application/vnd.github+json'
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $releasePayload = @{
+            tag_name = $env:GITHUB_REF_NAME
+            target_commitish = $env:GITHUB_SHA
+            name = "DSH Next Profile $env:GITHUB_REF_NAME"
+            body = "Automated DSH Next Profile release from $env:GITHUB_SHA. Verify SHA256SUMS before installation."
+            draft = $false
+            prerelease = $false
+          } | ConvertTo-Json
+          $release = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases" `
+            -Headers $headers -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($releasePayload))
+          foreach ($asset in $assets) {
+            $uploadBase = $release.upload_url -replace '\{\?.*$',''
+            $uploadUri = "$uploadBase?name=$([uri]::EscapeDataString($asset.Name))"
+            Invoke-RestMethod -Method Post -Uri $uploadUri -Headers $headers -ContentType 'application/octet-stream' -InFile $asset.FullName | Out-Null
+          }
+          Write-Host "Created $($release.html_url) with $($assets.Count) assets."
