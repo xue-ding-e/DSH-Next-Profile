@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { buildRelease } from '../scripts/build-release.mjs';
-import { assertPublicFile, npm, releaseMetadata, unpackLockedArchive } from '../scripts/pack-tools.mjs';
+import { assertPublicFile, npm, pnpm, releaseMetadata, unpackLockedArchive } from '../scripts/pack-tools.mjs';
 import { smokePackage, validatePackageFiles } from '../scripts/smoke-package.mjs';
 import { loadRelease } from '../src/manifest.mjs';
 import { execute } from '../src/process.mjs';
@@ -71,6 +71,9 @@ test('runtime exports and patches must be present in the npm inventory', async t
 
 test('real npm packages and ZIP include runnable installer and all nine local archives', { timeout: 180_000 }, async t => {
   const f = await buildFixture(t);
+  const recipe = JSON.parse(await readFile(f.manifestPath, 'utf8'));
+  recipe.baseline = { host: 'next', runtimeVersion: '1.0.0-rc.1', applicationVersion: '1.0.0-rc.1.20261107.1' };
+  await json(f.manifestPath, recipe);
   const output = join(f.root, 'output');
   const result = await buildRelease({ repository: f.repo, sources: f.repo, manifestPath: f.manifestPath, output, zip: process.platform === 'win32' });
   assert.equal((await loadRelease(join(result.stage, 'profile', 'manifest.json'))).plugins.length, 9);
@@ -82,6 +85,7 @@ test('real npm packages and ZIP include runnable installer and all nine local ar
   assert.equal(metadata.scripts, undefined);
   assert.ok((await execute(process.execPath, [join(extracted, 'package', 'src', 'cli.mjs'), '--help'])).stdout.includes('--dry-run'));
   const packed = await loadRelease(join(extracted, 'package', 'profile', 'manifest.json'));
+  assert.deepEqual(packed.manifest.baseline, recipe.baseline);
   const pluginDir = join(f.root, 'plugin');
   await mkdir(pluginDir);
   await execute('tar', ['-xzf', packed.plugins[0].archivePath, '-C', pluginDir]);
@@ -96,9 +100,8 @@ test('real npm packages and ZIP include runnable installer and all nine local ar
   const downloaded = await unpackLockedArchive({ ...firstPlugin, url: `https://example.test/${firstPlugin.name}.tgz` },
     downloadWork, async () => new Response(await readFile(firstPlugin.archivePath)));
   assert.ok(downloaded.archivePath.endsWith('.tgz'));
-  const cache = join(f.root, 'npm-cache');
-  const npx = await npm(['exec', '--yes', '--offline', '--cache', cache, '--package', result.tgz, '--', 'dsh-next-profile', '--help'], f.root);
-  assert.match(npx.stdout, /dsh-next-profile \[--host/u);
+  const dlx = await pnpm(['dlx', '--package', result.tgz, 'dsh-next-profile', '--help'], f.root);
+  assert.match(dlx.stdout, /dsh-next-profile \[--host/u);
   if (result.zip) {
     const zip = await readFile(result.zip);
     assert.equal(zip.subarray(0, 2).toString(), 'PK');

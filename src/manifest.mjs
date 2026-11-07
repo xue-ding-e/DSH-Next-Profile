@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readFile, realpath, stat } from 'node:fs/promises';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { archiveUrl, downloadArchive } from './archives.mjs';
 import { validateCompatibility } from './compatibility.mjs';
 
@@ -89,6 +89,41 @@ export function validateManifest(value, mode = 'release') {
   if (mode === 'release' && new Set(value.plugins.map(plugin => plugin.archive ?? plugin.url)).size !== value.plugins.length) {
     throw new Error('Every plugin requires a distinct archive.');
   }
+  if (value.baseline !== undefined && (!['original', 'next'].includes(value.baseline?.host)
+    || !exactVersion(value.baseline?.runtimeVersion) || !exactVersion(value.baseline?.applicationVersion))) {
+    throw new Error('Baseline requires a host kind and exact runtime/application versions.');
+  }
+  return value;
+}
+
+/** Validate the product feature placement record shipped with a Profile. */
+export function validateFeatureMatrix(value, plugins = []) {
+  if (value?.schemaVersion !== 1 || !['original', 'next'].includes(value.fullFeatureHost)
+    || !Array.isArray(value.features) || value.features.length < 1) {
+    throw new Error('profile/feature-matrix.json must have schemaVersion 1, a fullFeatureHost and features.');
+  }
+  const ids = value.features.map(feature => feature?.id);
+  if (new Set(ids).size !== ids.length || ids.some(id => typeof id !== 'string' || !id)) {
+    throw new Error('Feature matrix ids must be nonempty and unique.');
+  }
+  const pluginNames = new Set(plugins.map(plugin => plugin.name));
+  for (const feature of value.features) {
+    if (typeof feature.name !== 'string' || !feature.name
+      || !['plugin', 'plugin-candidate', 'source-required'].includes(feature.placement)
+      || typeof feature.wholeFeaturePluginizable !== 'boolean'
+      || typeof feature.status !== 'string') {
+      throw new Error(`Invalid feature matrix entry: ${feature.id}`);
+    }
+    if (feature.placement === 'plugin' && (!packageName(feature.package) || !feature.wholeFeaturePluginizable)) {
+      throw new Error(`Plugin feature is missing package: ${feature.id}`);
+    }
+    if (feature.placement === 'source-required' && feature.wholeFeaturePluginizable) {
+      throw new Error(`A source-required feature cannot claim complete plugin support: ${feature.id}`);
+    }
+    if (feature.includedByDefault === true && !pluginNames.has(feature.package)) {
+      throw new Error(`Default feature package is not in the release manifest: ${feature.id}`);
+    }
+  }
   return value;
 }
 
@@ -96,30 +131,41 @@ export async function sha256(path) {
   return createHash('sha256').update(await readFile(path)).digest('hex');
 }
 
-export async function loadRelease(manifestPath, request = fetch) {
-  const { dirname } = await import('node:path');
+/** Read local release locks without fetching archives or loading installed plugins. */
+export async function readRelease(manifestPath) {
   const root = dirname(dirname(await realpath(manifestPath)));
   const manifest = validateManifest(await readJson(manifestPath));
+  const records = {};
+  for (const [field, label, validate] of [
+    ['compatibility', 'Compatibility record', validateCompatibility],
+    ['featureMatrix', 'Feature matrix', validateFeatureMatrix],
+  ]) {
+    const reference = manifest[field];
+    if (!reference) continue;
+    const path = await confinedPath(root, reference.path);
+    if (!/^[a-f0-9]{64}$/u.test(reference.sha256 ?? '') || await sha256(path) !== reference.sha256) {
+      throw new Error(`${label} SHA-256 mismatch.`);
+    }
+    records[field] = validate(await readJson(path), manifest.plugins);
+  }
+  return { root, manifest, plugins: manifest.plugins, ...records };
+}
+
+/** Resolve the exact archive bytes only when installing or validating a downloadable kit. */
+export async function loadRelease(manifestPath, request = fetch) {
+  const release = await readRelease(manifestPath);
   const plugins = [];
-  for (const plugin of manifest.plugins) {
+  for (const plugin of release.plugins) {
     if (!plugin.archive) {
       const archiveBytes = await downloadArchive(plugin, request);
       plugins.push({ ...plugin, archive: `artifacts/${archiveFilename(plugin)}`, archiveBytes });
       continue;
     }
-    const archivePath = await confinedPath(root, plugin.archive);
+    const archivePath = await confinedPath(release.root, plugin.archive);
     if (!(await stat(archivePath)).isFile() || await sha256(archivePath) !== plugin.sha256) {
       throw new Error(`Archive SHA-256 mismatch or invalid file: ${plugin.archive}`);
     }
     plugins.push({ ...plugin, archivePath });
   }
-  let compatibility;
-  if (manifest.compatibility) {
-    const file = await confinedPath(root, manifest.compatibility.path);
-    if (!/^[a-f0-9]{64}$/u.test(manifest.compatibility.sha256 ?? '') || await sha256(file) !== manifest.compatibility.sha256) {
-      throw new Error('Compatibility record SHA-256 mismatch.');
-    }
-    compatibility = validateCompatibility(await readJson(file), plugins);
-  }
-  return { root, plugins, compatibility };
+  return { ...release, plugins };
 }

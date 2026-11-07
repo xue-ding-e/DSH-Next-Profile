@@ -1,5 +1,10 @@
 {
   "schemaVersion": 1,
+  "baseline": {
+    "host": "next",
+    "runtimeVersion": "0.2.2-rc.1",
+    "applicationVersion": "0.2.2-rc.1.20261107.1"
+  },
   "plugins": [
     {
       "name": "dsh-browser-control",
@@ -68,5 +73,9 @@
   "compatibility": {
     "path": "profile/compatibility.json",
     "sha256": "b56f2fa97847e8575dae58221420e2305cb6e9d7fb20bf35449b08b286aa05bd"
+  },
+  "featureMatrix": {
+    "path": "profile/feature-matrix.json",
+    "sha256": "4383464e09183aba59972533edb96788842c691b0b0e37643acad96d06ba2f30"
   }
 }

@@ -34,6 +34,15 @@ test('portable paths reject traversal, Windows drives/devices and alternate stre
   assert.equal(portablePath('artifacts/插件-1.0.0.tgz'), 'artifacts/插件-1.0.0.tgz');
 });
 
+test('skeleton baseline pins both runtime and application versions', () => {
+  const plugins = [{ name: 'test-plugin', version: '1.0.0', source: 'vendor/test-plugin' }];
+  for (const baseline of [{ host: 'other', runtimeVersion: '1.0.0', applicationVersion: '1.0.0' },
+    { host: 'next', runtimeVersion: '*', applicationVersion: '1.0.0' },
+    { host: 'next', runtimeVersion: '1.0.0', applicationVersion: 'latest' }]) {
+    assert.throws(() => validateManifest({ schemaVersion: 1, plugins, baseline }, 'source'), /exact runtime\/application/u);
+  }
+});
+
 test('archive directory junction cannot escape the release', async t => {
   const f = await installerFixture(t);
   const { rename, readFile } = await import('node:fs/promises');

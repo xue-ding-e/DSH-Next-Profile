@@ -29,7 +29,7 @@ export async function packPlugins({ sources, manifestPath = join(root, 'profile'
     }
     // The plugin repository's lock contains plugin assets only. Profile-owned host evidence is
     // copied and hash-checked by build-release when the installer package is assembled.
-    const lock = validateManifest({ schemaVersion: 1, plugins });
+    const lock = validateManifest({ schemaVersion: 1, plugins, ...(recipe.baseline ? { baseline: recipe.baseline } : {}) });
     await writeFile(join(output, 'manifest.json'), `${JSON.stringify(lock, null, 2)}\n`, { flag: 'wx' });
     await writeFile(join(output, 'SHA256SUMS'), plugins.map(plugin => `${plugin.sha256}  artifacts/${archiveFilename(plugin)}\n`).join(''), { flag: 'wx' });
     if (writeLock) {

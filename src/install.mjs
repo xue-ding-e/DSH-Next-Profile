@@ -3,26 +3,20 @@ import { constants } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadRelease, readJson, sha256 } from './manifest.mjs';
+import { loadRelease, readJson, readRelease, sha256 } from './manifest.mjs';
 import { execute } from './process.mjs';
 import { assertAppStopped, discoverApp, inspectRuntime, installationEnvironment, resolveHome, validateIsolation } from './runtime.mjs';
-import { assertNoLocks, assertOwnedDirectory, complete, initializedProfile, inspectPlugins, optionalJson } from './profile.mjs';
-import { capabilityNotices, hostIdentity } from './hosts.mjs';
-import { reportCompatibility } from './compatibility.mjs';
+import { assertNoLocks, assertOwnedDirectory, complete, initializeProfile, initializedProfile, inspectPlugins, optionalJson, profileAbsent } from './profile.mjs';
+import { capabilityNotices, hostIdentity, matchesBaseline } from './hosts.mjs';
+import { reportCompatibility, reportFeatureMatrix } from './compatibility.mjs';
+import { requiredSetup } from './diagnose.mjs';
 
 const source = dirname(fileURLToPath(import.meta.url));
 export const configurationNotice = 'Restart the selected desktop client. Plugin code installation is complete; configure authorizations and local resources required by the installed plugins separately.';
 
 function reportSetup(log, plugins) {
   log(configurationNotice);
-  const setup = {
-    'dsh-browser-control': 'Browser website logins belong to this computer; sign in as needed.',
-    'dsh-qoder-connect': 'Configure your own Qoder PAT.',
-    'dsh-bsk-bridge': 'Explicitly bind the intended BSK browser before use.',
-    'dsh-whale-boot': 'Whale video resources are not included and remain to be supplied.',
-    'dsh-plugin-subscriptions': 'Configure provider OAuth applications (including Antigravity when required) and authorize each provider.',
-  };
-  for (const { name } of plugins) if (Object.hasOwn(setup, name)) log(`Setup (${name}): ${setup[name]}`);
+  for (const item of requiredSetup(plugins)) log(`Setup (${item.package}): ${item.action}`);
 }
 
 async function persistArchives(profile, plugins) {
@@ -75,20 +69,43 @@ async function cachedInstallation(profile, plugins) {
 }
 
 export async function install(options, hooks = {}) {
+  if (options.initialize && (options.check || options.dryRun)) throw new Error('Profile initialization is not available in read-only mode.');
   const log = hooks.log ?? console.log;
-  const release = await loadRelease(options.manifest, hooks.request);
+  const release = options.check ? await readRelease(options.manifest) : await loadRelease(options.manifest, hooks.request);
   const runtime = hooks.runtime ?? (options.appDir ? await inspectRuntime(options.appDir, options.host) : await discoverApp(options.host));
   const host = runtime.host ?? 'next';
   const identity = hostIdentity(host);
   if (options.host && options.host !== host) throw new Error('Selected host does not match the installed package identity.');
+  const baselineMatches = matchesBaseline(release.manifest.baseline, runtime);
+  if (options.matchBaseline && baselineMatches !== true) {
+    const baseline = release.manifest.baseline;
+    throw new Error(baseline === undefined ? 'This release has no skeleton baseline to match.'
+      : `Skeleton baseline mismatch: requires ${baseline.host} ${baseline.applicationVersion} (runtime ${baseline.runtimeVersion}); selected ${host} ${runtime.applicationVersion ?? 'unknown'} (runtime ${runtime.version}). Install the matching skeleton first.`);
+  }
   const home = await resolveHome(options.home, runtime.root, process.env, undefined, host);
   await validateIsolation(options, home, runtime);
-  const profile = await initializedProfile(home);
   await (hooks.assertStopped ?? assertAppStopped)(runtime.root, host, options);
+  const run = hooks.execute ?? execute;
+  const env = installationEnvironment(home, process.env, host);
+  const profile = options.initialize && await profileAbsent(home)
+    ? await initializeProfile(home, async (profile) => {
+      await (hooks.assertStopped ?? assertAppStopped)(runtime.root, host, options);
+      await run(runtime.executable, ['--expose-internals', join(source, 'initialize.cjs'), runtime.root, profile],
+        { env, cwd: release.root, inherit: options.json ? 'stderr' : true });
+      log('Initialized desktop profile with the installed Host initializer.');
+    })
+    : await initializedProfile(home);
   await assertNoLocks(profile);
   const rows = await inspectPlugins(profile, release.plugins);
-  log(`${identity.product} ${runtime.version} (host=${host})\nApplication: ${runtime.root}\nDSH_HOME: ${home}\nProfile: ${profile}\nVerified release archives: ${release.plugins.length}`);
+  const result = (rows, changed) => ({ schemaVersion: 1, host, runtimeVersion: runtime.version,
+    applicationVersion: runtime.applicationVersion ?? null,
+    baseline: release.manifest.baseline ?? null, baselineMatches,
+    home, profile, rows, changed, codeInstalled: complete(rows), runtimeVerified: false, guiVerified: false,
+    setup: requiredSetup(release.plugins) });
+  log(`${identity.product} ${runtime.version} (host=${host})\nApplication: ${runtime.root}\nDSH_HOME: ${home}\nProfile: ${profile}\nRelease plugin locks: ${release.plugins.length}`);
+  if (baselineMatches === false) log('Skeleton differs from the recorded baseline; package installation does not establish the same complete feature set. Use --match-baseline to require an exact match.');
   reportCompatibility(release.compatibility, release.plugins, host, runtime.version, log);
+  reportFeatureMatrix(release.featureMatrix, host, log);
   for (const notice of capabilityNotices) {
     if (release.plugins.some(plugin => plugin.name === notice.plugin)) log(`Capability (${notice.plugin}): ${notice.message}`);
   }
@@ -96,11 +113,11 @@ export async function install(options, hooks = {}) {
     for (const row of rows) log(`${row.name}: dependency=${row.dependency}, installed=${row.installed}, bundle=${row.enabled}`);
     if (!complete(rows)) throw new Error('The extension collection is incomplete; run the installer without --check to install/repair it.');
     reportSetup(log, release.plugins);
-    return { home, profile, rows, changed: false };
+    return result(rows, false);
   }
   if (options.dryRun) {
     log(`Dry run: no profile files changed. Would cache ${release.plugins.length} verified archives, run dsh plugin --profile desktop add <cached archives>, enable their bundles, and verify the result.`);
-    return { home, profile, rows, changed: false };
+    return result(rows, false);
   }
   // The GUI checks this same lock during profile preparation; CLI owns package.json.lock separately.
   const lockPath = join(profile, 'lock');
@@ -120,23 +137,21 @@ export async function install(options, hooks = {}) {
     if (recorded && complete(await inspectPlugins(profile, release.plugins)) && await cachedInstallation(profile, release.plugins)) {
       log(`All ${release.plugins.length} extensions and bundles already match this release.`);
       reportSetup(log, release.plugins);
-      return { home, profile, rows, changed: false };
+      return result(rows, false);
     }
     const { state, paths } = await persistArchives(profile, release.plugins);
-    const env = installationEnvironment(home, process.env, host);
-    const run = hooks.execute ?? execute;
     await run(runtime.executable, ['--expose-internals', runtime.cli, 'plugin', '--profile', 'desktop', 'add', ...paths],
-      { env, cwd: release.root, inherit: true, timeout: 0 });
+      { env, cwd: release.root, inherit: options.json ? 'stderr' : true, timeout: 0 });
     if ((await inspectPlugins(profile, release.plugins)).some(row => !row.enabled)) {
       await run(runtime.executable, ['--expose-internals', join(source, 'activate.cjs'), runtime.root, profile, ...release.plugins.map(plugin => plugin.name)],
-        { env, cwd: release.root, inherit: true });
+        { env, cwd: release.root, inherit: options.json ? 'stderr' : true });
     }
     const after = await inspectPlugins(profile, release.plugins);
     if (!complete(after)) throw new Error(`Post-install verification failed: ${JSON.stringify(after)}. See ${join(profile, '.plugin-manager', 'logs')}.`);
     await saveReceipt(state, release.plugins);
     log(`Verified: ${release.plugins.length} installed dependencies and ${release.plugins.length} selected dsh.profile.bundles.`);
     reportSetup(log, release.plugins);
-    return { home, profile, rows: after, changed: true };
+    return result(after, true);
   } catch (error) {
     throw new Error(`Installation failed: ${error.message}\nDSH diagnostics: ${join(profile, '.plugin-manager', 'logs')}\nFix the reported error, fully quit ${identity.product}, then rerun. No success receipt was written for this attempt.`, { cause: error });
   } finally {

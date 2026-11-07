@@ -1,4 +1,4 @@
-import { glob, lstat, realpath, stat } from 'node:fs/promises';
+import { glob, lstat, mkdir, open, realpath, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readJson, within } from './manifest.mjs';
 
@@ -24,6 +24,39 @@ export async function initializedProfile(home) {
     throw new Error('Refusing a linked desktop profile package.json.');
   }
   return profile;
+}
+
+/** Create only a pristine profile while holding Desktop's preparation lock. */
+export async function initializeProfile(home, initialize) {
+  const profile = join(home, 'profiles', 'desktop');
+  for (const path of [home, join(home, 'profiles'), profile]) {
+    await mkdir(path, { recursive: true, mode: 0o700 });
+    await assertOwnedDirectory(home, path);
+  }
+  await assertNoLocks(profile);
+  // Partial profiles require Desktop recovery instead of guessing which files to recreate.
+  for (const file of ['package.json', 'cordis.patch.yml', 'pnpm-workspace.yaml']) {
+    try { await lstat(join(profile, file)); }
+    catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+    throw new Error(`Profile already contains ${file}. Open Desktop to finish initialization, then retry.`);
+  }
+  const path = join(profile, 'lock');
+  const lock = await open(path, 'wx', 0o600);
+  try {
+    await lock.writeFile(`${process.pid}\n`);
+    await lock.sync();
+    await initialize(profile);
+    return await initializedProfile(home);
+  } finally {
+    await lock.close();
+    await unlink(path);
+  }
+}
+
+/** Determine whether no profile directory has been created, without hiding malformed metadata. */
+export async function profileAbsent(home) {
+  try { await lstat(join(home, 'profiles', 'desktop')); return false; }
+  catch (error) { if (error.code === 'ENOENT') return true; throw error; }
 }
 
 export async function assertNoLocks(profile) {
@@ -66,7 +99,8 @@ export async function inspectPlugins(profile, plugins) {
       }
       runtimeFiles &&= found;
     }
-    rows.push({ name: plugin.name, dependency: typeof manifest.dependencies?.[plugin.name] === 'string',
+    rows.push({ name: plugin.name, version: plugin.version, installedVersion: installed?.version ?? null,
+      dependency: typeof manifest.dependencies?.[plugin.name] === 'string',
       installed: installed?.name === plugin.name && installed?.version === plugin.version && runtimeFiles,
       enabled: bundles.includes(plugin.name) });
   }

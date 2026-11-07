@@ -89,6 +89,60 @@ test('uninitialized desktop profiles are never manufactured', async t => {
   await missing(join(f.root, 'not-started'));
 });
 
+test('explicit first install initializes through the installed helper before the package CLI', async t => {
+  const f = await installerFixture(t, ['@custom/single-plugin']);
+  f.home = join(f.root, 'new computer');
+  f.profile = join(f.home, 'profiles', 'desktop');
+  const hooks = fakeRuntime(f);
+  const result = await install({ ...options(f), initialize: true, json: true }, hooks);
+  assert.equal(result.codeInstalled, true);
+  assert.equal(result.changed, true);
+  assert.ok(hooks.calls[0].args[1].endsWith('initialize.cjs'));
+  assert.equal(hooks.calls[0].args.at(-1), f.profile);
+  assert.equal(hooks.calls[0].options.inherit, 'stderr');
+  assert.ok(hooks.calls[1].args.includes('add'));
+  assert.equal(hooks.calls[1].options.env.DSH_HOME, f.home);
+  await missing(join(f.profile, 'lock'));
+});
+
+test('first-install failure releases the preparation lock and writes no success receipt', async t => {
+  const f = await installerFixture(t, ['@custom/single-plugin']);
+  f.home = join(f.root, 'new computer');
+  f.profile = join(f.home, 'profiles', 'desktop');
+  const hooks = fakeRuntime(f);
+  hooks.execute = async () => { throw new Error('incompatible installed initializer'); };
+  await assert.rejects(install({ ...options(f), initialize: true }, hooks), /incompatible installed initializer/u);
+  await missing(join(f.profile, 'lock'));
+  await missing(join(f.profile, '.extension-pack', 'installed.json'));
+  await assert.rejects(install({ ...options(f), initialize: true, check: true }, hooks), /read-only/u);
+});
+
+test('check uses URL locks without making a download request', async t => {
+  const f = await installerFixture(t, ['@custom/single-plugin']);
+  const hooks = fakeRuntime(f);
+  await install(options(f), hooks);
+  await json(f.manifest, { schemaVersion: 1, plugins: f.plugins.map(({ name, version, sha256 }) => ({
+    name, version, sha256, url: `https://example.invalid/${name.replace('/', '+')}.tgz`,
+  })) });
+  hooks.request = () => { throw new Error('Unexpected download'); };
+  assert.equal((await install({ ...options(f), check: true }, hooks)).codeInstalled, true);
+});
+
+test('exact skeleton mismatch refuses initialization and installation before any write', async t => {
+  const f = await installerFixture(t, ['@custom/single-plugin']);
+  const hooks = fakeRuntime(f);
+  const baseline = { host: 'next', runtimeVersion: '0.2.2-rc.1', applicationVersion: '0.2.2-rc.1.20261107.1' };
+  await json(f.manifest, { schemaVersion: 1, plugins: f.plugins, baseline });
+  const before = await readFile(join(f.profile, 'package.json'));
+  await assert.rejects(install({ ...options(f), matchBaseline: true, initialize: true }, hooks), /Skeleton baseline mismatch/u);
+  assert.equal(hooks.calls.length, 0);
+  await missing(join(f.profile, '.extension-pack'));
+  assert.deepEqual(await readFile(join(f.profile, 'package.json')), before);
+  f.runtime.version = baseline.runtimeVersion;
+  f.runtime.applicationVersion = baseline.applicationVersion;
+  assert.equal((await install({ ...options(f), matchBaseline: true }, hooks)).baselineMatches, true);
+});
+
 test('CLI failure propagates and preserves account data without a success receipt', async t => {
   const f = await installerFixture(t);
   const auth = await readFile(join(f.home, 'auth.json'));

@@ -1,7 +1,7 @@
 import { glob, readFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { confinedPath, portablePath, readJson, sha256, validateManifest } from '../src/manifest.mjs';
+import { confinedPath, portablePath, readJson, sha256, validateFeatureMatrix, validateManifest } from '../src/manifest.mjs';
 import { assertPublicFile, inventory, root } from './pack-tools.mjs';
 import { validateCompatibility } from '../src/compatibility.mjs';
 
@@ -54,13 +54,19 @@ export async function smokePackage(directory) {
     if (await sha256(path) !== lock.compatibility.sha256) throw new Error('Compatibility record SHA-256 mismatch.');
     validateCompatibility(await readJson(path), lock.plugins);
   }
+  if (lock.featureMatrix) {
+    const path = await confinedPath(directory, lock.featureMatrix.path);
+    if (await sha256(path) !== lock.featureMatrix.sha256) throw new Error('Feature matrix SHA-256 mismatch.');
+    validateFeatureMatrix(await readJson(path), lock.plugins);
+  }
   const metadata = await readJson(join(directory, 'package.json'));
   if (metadata.bin?.['dsh-next-profile'] !== 'src/cli.mjs') throw new Error('npm package has no dsh-next-profile CLI.');
   const pack = await inventory(directory);
   const files = new Set(pack.files.map(file => file.path));
-  for (const name of ['src/cli.mjs', 'src/install.mjs', 'src/runtime-probe.cjs', 'src/activate.cjs',
+  for (const name of ['src/cli.mjs', 'src/install.mjs', 'src/diagnose.mjs', 'src/initialize.cjs', 'src/runtime-probe.cjs', 'src/activate.cjs',
     'installer/Install.ps1', 'installer/Find-DshNext.ps1', 'profile/manifest.json',
     ...(lock.compatibility ? [lock.compatibility.path] : []),
+    ...(lock.featureMatrix ? [lock.featureMatrix.path] : []),
     ...lock.plugins.flatMap(plugin => plugin.archive ? [plugin.archive] : [])]) {
     if (!files.has(name) || !(await stat(join(directory, name))).isFile()) throw new Error(`Installer npm package is incomplete: ${name}`);
   }

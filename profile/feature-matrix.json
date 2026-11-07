@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "fullFeatureHost": "next",
+  "extractionRule": "Move a feature only when its complete runtime behavior and GUI can be installed through existing Host services and public UI positions. Retain integrated changes that require new skeleton APIs, private implementation access or replacement copies of shipped UI.",
+  "features": [
+    {
+      "id": "browser-control",
+      "name": "Browser control",
+      "placement": "plugin",
+      "wholeFeaturePluginizable": true,
+      "status": "external",
+      "package": "dsh-browser-control",
+      "includedByDefault": true,
+      "evidence": ["plugins/dsh-browser-control"]
+    },
+    {
+      "id": "bsk-bridge",
+      "name": "BrowserSkill bridge",
+      "placement": "plugin",
+      "wholeFeaturePluginizable": true,
+      "status": "external",
+      "package": "dsh-bsk-bridge",
+      "includedByDefault": true,
+      "evidence": ["plugins/dsh-bsk-bridge"]
+    },
+    {
+      "id": "input-guard",
+      "name": "Cooperative input guard",
+      "placement": "plugin",
+      "wholeFeaturePluginizable": true,
+      "status": "external",
+      "package": "dsh-input-guard",
+      "includedByDefault": true,
+      "evidence": ["plugins/dsh-input-guard"]
+    },
+    {
+      "id": "whale-boot",
+      "name": "Whale boot media",
+      "placement": "plugin",
+      "wholeFeaturePluginizable": true,
+      "status": "external",
+      "package": "dsh-whale-boot",
+      "includedByDefault": true,
+      "evidence": ["plugins/dsh-whale-boot"]
+    },
+    {
+      "id": "retry-tuning",
+      "name": "Retry tuning",
+      "placement": "plugin",
+      "wholeFeaturePluginizable": true,
+      "status": "external",
+      "package": "dsh-retry-tuning",
+      "includedByDefault": true,
+      "evidence": ["plugins/dsh-retry-tuning"]
+    },
+    {
+      "id": "provider-subscriptions",
+      "name": "Subscription model providers",
+      "placement": "plugin",
+      "wholeFeaturePluginizable": true,
+      "status": "external",
+      "package": "dsh-plugin-subscriptions",
+      "includedByDefault": true,
+      "evidence": ["plugins/dsh-plugin-subscriptions"]
+    },
+    {
+      "id": "qoder-connect",
+      "name": "Qoder Connect",
+      "placement": "plugin",
+      "wholeFeaturePluginizable": true,
+      "status": "external",
+      "package": "dsh-qoder-connect",
+      "includedByDefault": true,
+      "evidence": ["plugins/dsh-qoder-connect"]
+    },
+    {
+      "id": "chat-import",
+      "name": "Chat import",
+      "placement": "plugin",
+      "wholeFeaturePluginizable": true,
+      "status": "external",
+      "package": "dsh-chat-import",
+      "includedByDefault": true,
+      "evidence": ["plugins/dsh-chat-import"]
+    },
+    {
+      "id": "session-relay",
+      "name": "Cross-chat session relay",
+      "placement": "plugin",
+      "wholeFeaturePluginizable": true,
+      "status": "external-optional",
+      "package": "dsh-session-relay",
+      "includedByDefault": false,
+      "evidence": ["plugins/dsh-session-relay"]
+    },
+    {
+      "id": "sidebar-organization",
+      "name": "Sidebar organization",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "Named sections, pinned chats, Recent, Projects, search, scrolling, drag settlement and new-session assignment share the private Workspace browser/store. Extracting them requires replacing the shipped browser and retaining a second implementation.",
+      "evidence": ["packages/client/ui-workspace", "packages/client/ui-sidebar"]
+    },
+    {
+      "id": "workspace-session-actions",
+      "name": "Workspace and Session menus",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "Upstream already owns right-click, keyboard menus and native Reveal. The active local changes adjust existing row activation, ordering and shared menu behavior; they do not add an independent feature to extract.",
+      "evidence": ["packages/client/ui-workspace"]
+    },
+    {
+      "id": "workspace-browser-interaction",
+      "name": "Workspace folders, hover details and blank-session visibility",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "The source-folder editor, drag-first folder picker, activity and hover details, blank-row filtering and manual order participate in the existing Workspace browser and its private state.",
+      "evidence": ["packages/client/ui-workspace"]
+    },
+    {
+      "id": "account-refresh",
+      "name": "Account balance refresh",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "The existing account card has no public action position or shared account snapshot service for its refresh button, busy state and error feedback. A separate page would change the feature.",
+      "evidence": ["packages/client/ui-settings-account"]
+    },
+    {
+      "id": "session-reference-composer",
+      "name": "Session reference navigation, selection and composer drops",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "Sent reference identities, selection gestures, Lexical editor activation and composer drop targets are integrated into private Conversation and Chat assembly. Replacing only the sent-reference renderer omits part of the feature.",
+      "evidence": ["packages/context/session-reference", "packages/api/remotes", "packages/client/ui-conversation", "packages/client/ui-chat"]
+    },
+    {
+      "id": "historical-message-editing",
+      "name": "Historical message editing with files and images",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "The current user-message editor, fork/send transaction, authenticated historical-file restaging and draft ownership must move together. Existing public action positions do not expose this complete behavior.",
+      "evidence": ["packages/client/ui-chat", "packages/client/ui-conversation", "packages/client/file-upload", "packages/api/session-controller"]
+    },
+    {
+      "id": "workspace-source-directories",
+      "name": "Workspace source directories",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "The authoritative Workspace model, Remote controller, Session binding, Sandbox policy, file uploads and Host path operations must agree.",
+      "evidence": ["packages/workspace/workspace", "packages/api/workspace-controller", "packages/sandbox/sandbox-policy", "apps/desktop"]
+    },
+    {
+      "id": "queue-durability",
+      "name": "Durable queue recall with attachment and focus recovery",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "Atomic inbox recall, durable recovery identity, attachment authority and the initiating Session's draft/focus transaction require coordinated AgentLoop, API and Composer changes. Ordinary queue operations and prompt retry de-duplication already exist upstream.",
+      "evidence": ["packages/core/agent-loop", "packages/api/session-controller"]
+    },
+    {
+      "id": "image-offload-retry",
+      "name": "Image offload and gateway retry",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "The current behavior spans provider error vocabulary, compaction, request-series handling and the shared LLM path.",
+      "evidence": ["packages/llm", "packages/compaction"]
+    },
+    {
+      "id": "desktop-question-notifications",
+      "name": "Native desktop question notifications",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "The browser surface can be a plugin, but native notification delivery needs Electron main-process and preload IPC.",
+      "evidence": ["packages/client/ui-user-questions", "apps/desktop"]
+    },
+    {
+      "id": "native-navigation",
+      "name": "Native mouse side-button navigation",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "mixed",
+      "package": "dsh-nav-buttons",
+      "includedByDefault": true,
+      "reason": "The history logic is plugin-compatible, while full AppCommand delivery requires the Desktop Host IPC bridge.",
+      "evidence": ["apps/desktop", "plugins/dsh-nav-buttons"]
+    },
+    {
+      "id": "browser-session-persistence",
+      "name": "Sidebar browser login persistence",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "The Electron guest manager chooses persistent Workspace partitions before browser content loads; the browser plugin has no public partition-policy registration.",
+      "evidence": ["apps/desktop/src/browser-guests.ts", "packages/client/ui-sidebar-browser"]
+    },
+    {
+      "id": "desktop-release-and-migration",
+      "name": "Desktop release, update and data migration",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "Launcher identity, Electron packaging, update channels and first-launch data migration run before external plugins compose.",
+      "evidence": ["apps/desktop", "apps/cli"]
+    },
+    {
+      "id": "shared-ui-fixes",
+      "name": "Shared Menu, Markdown and build display fixes",
+      "placement": "source-required",
+      "wholeFeaturePluginizable": false,
+      "status": "source-currently",
+      "reason": "These fix shipped shared components; replacing them from a plugin would copy the official UI and lose later upstream fixes.",
+      "evidence": ["packages/client/ui-primitives", "packages/client/ui-settings-general", "packages/client/modules"]
+    }
+  ]
+}

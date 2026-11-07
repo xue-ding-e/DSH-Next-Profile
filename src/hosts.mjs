@@ -12,6 +12,12 @@ export function hostIdentity(host) {
   return HOSTS[host];
 }
 
+/** Exact package identity for reproducing one machine's installed skeleton. */
+export function matchesBaseline(baseline, runtime) {
+  return baseline === undefined ? null : baseline.host === runtime.host
+    && baseline.runtimeVersion === runtime.version && baseline.applicationVersion === runtime.applicationVersion;
+}
+
 export const capabilityNotices = [
   { plugin: 'dsh-nav-buttons', message: 'Native AppCommand support requires globalThis.dshDesktop.protocolVersion === 1 and dshDesktop.navigation.subscribe. An upstream host without that IPC only has the plugin DOM pointer fallback; installation does not verify native navigation.' },
   { plugin: 'dsh-browser-control', message: 'Requires an Electron sidebar webview with executeJavaScript/loadURL. Six tools are registered; screenshots have no supported public preload API and are not offered.' },

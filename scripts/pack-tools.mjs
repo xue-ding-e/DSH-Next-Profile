@@ -1,5 +1,5 @@
 import { access, copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execute, cleanEnvironment } from '../src/process.mjs';
 import { archiveFilename, confinedPath, portablePath, readJson } from '../src/manifest.mjs';
@@ -20,6 +20,28 @@ export async function npm(args, cwd) {
   }
   if (!cli) throw new Error('Build requires npm (npm-cli.js next to Node, or npm_execpath). End users use DSH Next bundled tools.');
   return execute(process.execPath, [cli, ...args], { cwd, env: { ...cleanEnvironment(), npm_config_cache: join(root, 'scripts', '.work', 'npm-cache'), npm_config_update_notifier: 'false', npm_config_audit: 'false' }, timeout: 120_000 });
+}
+
+/** Run the user-facing package runner for local published-artifact smoke tests. */
+export async function pnpm(args, cwd) {
+  const candidates = [
+    process.env.PNPM_CLI_PATH,
+    ...((process.env.PATH ?? '').split(delimiter).filter(Boolean).flatMap(directory => [
+      join(directory, 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+      join(directory, 'node_modules', 'pnpm', 'bin', 'pnpm.mjs'),
+    ])),
+    join(dirname(process.execPath), 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
+    join(dirname(process.execPath), 'node_modules', 'pnpm', 'bin', 'pnpm.mjs'),
+  ].filter(Boolean);
+  let cli;
+  for (const candidate of candidates) {
+    try { await access(candidate); cli = candidate; break; }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+  if (!cli) throw new Error('Build requires pnpm (set PNPM_CLI_PATH or add pnpm to PATH).');
+  return execute(process.execPath, [cli, ...args], {
+    cwd, env: { ...cleanEnvironment(), npm_config_update_notifier: 'false', npm_config_audit: 'false' }, timeout: 120_000,
+  });
 }
 
 export function assertPublicFile(name, bytes) {

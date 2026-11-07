@@ -21,3 +21,21 @@ export function reportCompatibility(record, plugins, host, version, log) {
     for (const gap of row.confirmedGaps ?? []) log(`  ${gap.capability}: ${gap.detail}`);
   }
 }
+
+/** Report which parts of the complete DSH Next experience are supplied by the host. */
+export function reportFeatureMatrix(record, host, log) {
+  if (!record) {
+    log('Feature coverage: no feature matrix supplied; source-owned host requirements are unknown.');
+    return;
+  }
+  const pluginFeatures = record.features.filter(feature => feature.placement === 'plugin');
+  const defaultPluginFeatures = pluginFeatures.filter(feature => feature.includedByDefault === true);
+  const optionalPluginFeatures = pluginFeatures.filter(feature => feature.includedByDefault !== true);
+  const sourceFeatures = record.features.filter(feature => feature.placement === 'source-required');
+  const candidates = record.features.filter(feature => feature.placement === 'plugin-candidate');
+  log(`Feature coverage: ${defaultPluginFeatures.length} default external plugin features, ${optionalPluginFeatures.length} optional external plugin features, ${sourceFeatures.length} host-owned features, ${candidates.length} plugin candidates.`);
+  if (host !== record.fullFeatureHost && sourceFeatures.length > 0) {
+    log(`Feature coverage: host=${host} receives the plugin subset only; the complete feature set requires host=${record.fullFeatureHost}.`);
+  }
+  for (const feature of candidates) log(`Feature candidate (${feature.id}): remains in source until its complete Host and Client implementation is extracted.`);
+}

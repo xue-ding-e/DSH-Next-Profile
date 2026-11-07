@@ -1,11 +1,12 @@
 {
   "name": "dsh-next-profile",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A thin version lock and installer for personal extensions on DeepSeek Harness and DSH Next.",
   "type": "module",
   "license": "MIT",
+  "packageManager": "pnpm@11.28.5",
   "bin": { "dsh-next-profile": "src/cli.mjs" },
-  "files": ["src", "installer", "profile/manifest.json", "profile/compatibility.json", "artifacts", "README.md", "README.zh.md", "LICENSE"],
+  "files": ["src", "installer", "profile/manifest.json", "profile/compatibility.json", "profile/feature-matrix.json", "artifacts", "README.md", "README.zh.md", "LICENSE"],
   "engines": { "node": ">=24.9.0" },
   "scripts": {
     "test": "node --test tests/*.test.mjs",

@@ -14,7 +14,7 @@
 
 ## 在新电脑安装
 
-1. 安装最新版**官方 DeepSeek Harness 原版或 DSH Next**，先启动一次，等待桌面 profile 初始化，然后完全退出，包括托盘中的进程。只关窗口可能仍在后台运行。
+1. 要复现源码功能，请安装 **DSH Next**；官方 DeepSeek Harness 可安装外置插件子集。安装后完全退出应用，包括托盘中的进程，只关窗口可能仍在后台运行。0.2.0 CLI 通过安装包自带的初始化函数创建空白 Profile；不完整的既有 Profile 仍需先打开客户端恢复。
 2. 从本仓库 Releases 下载 Windows ZIP，完整解压到本地目录。`Install.cmd`、`installer/`、`src/`、`profile/`、`artifacts/` 必须放在一起，不要在压缩包预览窗口中直接运行。
 3. 双击 `Install.cmd`。9 个插件 tgz 已随包附带，普通运行依赖仍可能需要从 npm registry 下载，因此安装时可能需要网络。
 4. 出现已核对 9 个依赖和 9 个 bundle 的提示后，重新启动所选客户端。登录、PAT、OAuth、浏览器绑定和视频资源需按下表单独配置。
@@ -27,9 +27,9 @@ Install.cmd --host next --app-dir "C:\Apps\DSH Next" --check
 Install.cmd --host next --app-dir "C:\Apps\DSH Next" --home "C:\Data\dsh-next"
 ```
 
-原版使用 `DSH_HOME` 或 `%USERPROFILE%\.dsh`；Next 使用 `DSH_NEXT_HOME` 或 `%USERPROFILE%\.dsh-next`。`--home` 优先于所选宿主的默认值，必须指向该应用实际使用、且已经初始化的目录，其中应有 `profiles/desktop/package.json` 和 `pnpm-workspace.yaml`。自定义目录应在启动该宿主时设置对应环境变量，先打开并退出一次。安装器不初始化或复制 profile，会拒绝另一宿主的已知数据目录、它的父子目录、应用安装目录，以及通过 junction 指向这些位置的路径。安装到原版是明确选择，不是 Next 探测失败后的后备行为。
+原版使用 `DSH_HOME` 或 `%USERPROFILE%\.dsh`；Next 使用 `DSH_NEXT_HOME` 或 `%USERPROFILE%\.dsh-next`。`--home` 优先于所选宿主的默认值，必须指向该应用实际使用的目录。安装命令可初始化尚不存在的桌面 Profile，不会猜测并补写不完整 Profile 中缺少的文件。自定义目录应在启动该宿主时设置对应环境变量。安装器不复制用户 Profile，会拒绝另一宿主的已知数据目录、它的父子目录、应用安装目录，以及通过 junction 指向这些位置的路径。安装到原版是明确选择，不是 Next 探测失败后的后备行为。
 
-`--dry-run` 只检查运行时、首次初始化状态、退出状态、锁、路径和归档哈希，不写 profile。`--check` 也只读，仅当清单中所有指定版本已作为依赖安装、运行文件存在且全部列入 `dsh.profile.bundles` 时返回 0。无人值守时可在当前进程设置 `DSH_NEXT_INSTALL_NO_PAUSE=1`，跳过命令窗口结束前的 `pause`。
+`--dry-run` 只检查已初始化 Profile、运行时、退出状态、锁、路径和归档哈希，不写 Profile。`check` / `--check` 不下载归档，核对安装版本、运行文件和 `dsh.profile.bundles`，仍要求退出应用；`doctor` 可在客户端运行时读取同一清单，对尚未创建的 Profile 返回缺失状态而不创建它。包安装、服务商授权、运行时与 GUI 可用状态分别报告。加 `--json` 可获得机器可读结果。无人值守时可在当前进程设置 `DSH_NEXT_INSTALL_NO_PAUSE=1`，跳过命令窗口结束前的 `pause`。
 
 `--isolated` 只用于受控的 packaged host smoke，必须同时显式指定 `--host`、`--app-dir`、`--home`，且 home 位于 `.dsh` 与 `.dsh-next` 两套正常目录之外。只有确认其他进程的可执行文件位于所选私有 app 根目录之外时才可排除它；选中进程或归属未知仍会阻止安装。普通安装继续要求完整退出宿主。
 
@@ -48,16 +48,28 @@ Install.cmd --host next --app-dir "C:\Apps\DSH Next" --home "C:\Data\dsh-next"
 
 `dsh-nav-buttons` 的原生鼠标 AppCommand 导航依赖 `globalThis.dshDesktop.protocolVersion === 1` 和 `dshDesktop.navigation.subscribe`。原版宿主若缺少该 IPC，只能使用插件的 DOM 鼠标事件回退；安装器不会宣称原生导航已通过验证。Browser control 需要提供 `executeJavaScript`、`loadURL` 的 Electron 侧栏 webview；收集的实现缺少受支持的公开 preload 截图接口，因此截图动作不可用，可按需使用 snapshot/read_text。这些限制单独报告，不阻塞 Next 的代码安装；原版具体具备哪些 GUI 能力仍需真实宿主验收。
 
-## npm / npx 入口
+## pnpm dlx 入口
 
-已有 Node 24.9+ 和 npm 的电脑，可以用包含 manifest 和本地归档的**构建后 Release tgz**，无需 npm 发布 token。维护者发布 `v0.1.0` 后的示例：
+已有 Node 24.9+ 和 pnpm 的电脑，可以用包含 manifest 和本地归档的**构建后 Release tgz**，无需注册表发布或账号令牌。已发布的 v0.1.0 安装器使用原有 flags CLI；使用这个旧发行前先启动客户端一次以初始化 Profile：
 
 ```powershell
-npx --yes --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.1.0/dsh-next-profile-0.1.0.tgz" dsh-next-profile --check
-npx --yes --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.1.0/dsh-next-profile-0.1.0.tgz" dsh-next-profile
+pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.1.0/dsh-next-profile-0.1.0.tgz" dsh-next-profile --check
+pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.1.0/dsh-next-profile-0.1.0.tgz" dsh-next-profile
 ```
 
-请按实际发布版本替换下载 URL，并用 `--host original` 或 `--host next` 选择宿主。CLI 还支持 `--app-dir`、`--home`、`--manifest`、`--check` 和 `--dry-run`。npm tgz 可附带本地插件归档，也可使用精确的公开 URL/SHA-256 锁，在安装时匿名下载并验哈希。ZIP 方式只使用应用内置工具。GitHub 自动生成的源码压缩包不是预构建 Windows 安装包。
+请按实际发布版本替换下载 URL，并用 `--host original` 或 `--host next` 选择宿主。CLI 还支持 `--app-dir`、`--home`、`--manifest`、`--check` 和 `--dry-run`。tgz 可附带本地插件归档，也可使用精确的公开 URL/SHA-256 锁，在安装时匿名下载并验哈希。ZIP 方式只使用应用内置工具。GitHub 自动生成的源码压缩包不是预构建 Windows 安装包。
+
+0.2.0 构建新增 `install`、`check`、`doctor` 和 `features` 命令。发布前可将构建的 tgz 复制到新电脑并使用本地路径；发布后，同一 `--package` 参数可改为不可变的 Release URL：
+
+```powershell
+pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.0.tgz" dsh-next-profile install --host next --match-baseline
+pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.0.tgz" dsh-next-profile doctor --host next --match-baseline --json
+pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.0.tgz" dsh-next-profile features --json
+```
+
+`profile/manifest.json` 除插件版本和 SHA-256 外，还记录精确的骨架基线。`--match-baseline` 在写 Profile 前拒绝宿主种类、运行时版本或安装版应用版本不一致的情况；`doctor` 在包状态旁报告 `baselineMatches`。这锁定安装的代码，不复制账号、浏览器身份、会话或外观偏好。新电脑的 OAuth/PAT 授权、BSK 安装与绑定、本地视频仍按上表配置。
+
+`profile/feature-matrix.json` 是完整功能归属的维护位置：需要源码的 GUI 和底层实现整体保留，既有外置包单独记录，原生侧键的插件部分仍标记为依赖 Next 骨架。`features` 不访问 Desktop 或网络即可读取经哈希锁定的记录。将插件装到官方 Harness 只能得到插件子集，不会添加 Next 的源码功能。运行时和 GUI 等价需要匹配骨架及对应功能验收，不能仅凭静态包清单宣称通过。
 
 完整 v0.1.0 候选包使用不可变插件 tgz 通过 `--archives` 组装，并携带哈希核验的 `profile/compatibility.json` 静态证据。记录会区分源码/API 匹配与运行时验证，保留官方宿主 preflight 拒绝和原生导航 IPC 缺口，不会把原版 GUI 或 provider 授权报告为已验证。
 
@@ -73,7 +85,7 @@ npx --yes --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/dow
 
 ## 构建发布包
 
-构建机需要 Node 24.9+ 和 npm。每个插件的源码、已构建的 **`lib/` 产物**、运行资源和上游许可证均放在独立 Plugins 仓库的 `plugins/<name>/`。Profile 仓库不跟踪插件源码，`vendor/` 仅作为被忽略的过渡备份。构建脚本不会编译插件、安装插件依赖或修改外部源码树。先清理个人路径和凭据，BSK 保持明确未绑定状态，Whale 视频保持未配置状态。
+构建机需要 Node 24.9+ 和 pnpm 11.28.5。每个插件的源码、已构建的 **`lib/` 产物**、运行资源和上游许可证均放在独立 Plugins 仓库的 `plugins/<name>/`。Profile 仓库不跟踪插件源码，`vendor/` 仅作为被忽略的过渡备份。构建脚本不会编译插件、安装插件依赖或修改外部源码树。先清理个人路径和凭据，BSK 保持明确未绑定状态，Whale 视频保持未配置状态。
 
 由维护者创建 `profile/manifest.json`，使用 schema version 1 和所需的非空插件清单：
 
@@ -111,12 +123,12 @@ node scripts/build-release.mjs `
 node scripts/smoke-package.mjs --directory .output/full-v0.1.0/package
 ```
 
-每次使用新的输出目录，已存在的 `package/` 会被拒绝，避免混入旧产物。Windows 通过系统 PowerShell/.NET 生成 ZIP；其他平台需要 `zip` 命令，也可用 `--no-zip` 只生成 npm tgz。不传 `--sources` 时，构建器从 URL 锁下载，用系统 `tar` 检查并解包后才接收产物，无需额外 Node 依赖。全部 URL 和哈希公开发布后，可在仓库根运行 `npm pack` 生成薄 npm 包，prepack 会验证所需文件与版本锁。
+每次使用新的输出目录，已存在的 `package/` 会被拒绝，避免混入旧产物。Windows 通过系统 PowerShell/.NET 生成 ZIP；其他平台需要 `zip` 命令，也可用 `--no-zip` 只生成 tgz。不传 `--sources` 时，构建器从 URL 锁下载，用系统 `tar` 检查并解包后才接收产物，无需额外 Node 依赖。全部 URL 和哈希公开发布后，可在仓库根运行 `pnpm pack` 生成薄包，prepack 会验证所需文件与版本锁。
 
-构建过程使用 `npm pack --ignore-scripts` 和 npm 的文件清单，将选定文件复制到临时目录后删除开发依赖及全部插件生命周期脚本，保留运行依赖和许可证。下载的 tgz 必须预先构建并去掉脚本、开发依赖。遇到不可移植依赖、缺失构建入口、patch 或许可证、个人账号及浏览器文件、旧磁盘绝对路径、可识别密钥格式、旧 BSK 浏览器绑定时停止打包。下载归档若包含链接、特殊文件或重复路径也会被拒绝。自动检查只能拒绝已知问题，发布前维护者仍应审查插件内容。
+构建脚本内部使用 npm 的维护版 packlist 整理插件归档，删除开发依赖和全部插件生命周期脚本，并保留运行依赖与许可证；终端用户和 CI 使用 pnpm 打包 Profile。下载的 tgz 必须预先构建并去掉脚本、开发依赖。遇到不可移植依赖、缺失构建入口、patch 或许可证、个人账号及浏览器文件、旧磁盘绝对路径、可识别密钥格式、旧 BSK 浏览器绑定时停止打包。下载归档若包含链接、特殊文件或重复路径也会被拒绝。自动检查只能拒绝已知问题，发布前维护者仍应审查插件内容。
 
 若还需精确拒绝指定密钥，可通过 `DSH_PROFILE_DENY_SECRETS_FILE` 指向仓库外的私有 JSON 文件，内容是密钥字符串数组。构建器按字节查找，命中即拒绝且不打印密钥值；文件及内容不会复制到产物。密钥回归测试仅使用合成值。根 MIT 许可证仅覆盖安装器代码，各插件归档保留各自上游许可证。
 
 完整构建的 `profile/manifest.json` 包含 `schemaVersion: 1`，为每个选定插件记录 `name`、精确 `version`、`archive`（例如 `artifacts/dsh-browser-control-1.0.0.tgz`）和小写十六进制 `sha256`，不记录绝对源码路径。Windows ZIP 与完整 npm tgz 都包含发布 manifest、`src/`、`installer/`、LICENSE 和清单中全部插件 tgz；ZIP 根还包含 `Install.cmd`。薄 npm 包则保留公开 URL 锁，安装时下载归档。输出目录的 `SHA256SUMS` 列出外层产物哈希。哈希用于检测相对于 manifest 的文件变化，并非发布者签名，请从可信发布来源下载整包。
 
-测试使用 Node 内置 `node:test` 和可丢弃的隔离夹具，覆盖哈希与路径拒绝、双宿主目录隔离、首次初始化、锁、CLI 参数及环境、失败返回、幂等、bundle 核验、个人数据拒绝、公开 URL 锁和真实 npm/ZIP 打包。设置 `DSH_NEXT_TEST_APP_DIR` 为真实 Next 安装目录，还可用一次性 profile 夹具核验其 Electron 探测、安装版原子写入和 PowerShell 退出状态检查，不会停止正在运行的客户端。测试不验证 provider 已可用，也不能替代两种真实宿主的隔离 profile 安装验收。
+测试使用 Node 内置 `node:test` 和可丢弃的隔离夹具，覆盖哈希与路径拒绝、双宿主目录隔离、首次初始化、锁、CLI 参数及环境、失败返回、幂等、bundle 核验、个人数据拒绝、公开 URL 锁和真实 pnpm/npm 打包。设置 `DSH_NEXT_TEST_APP_DIR` 为真实 Next 安装目录，还可用一次性 profile 夹具核验其 Electron 探测、安装版原子写入和 PowerShell 退出状态检查，不会停止正在运行的客户端。测试不验证 provider 已可用，也不能替代两种真实宿主的隔离 profile 安装验收。

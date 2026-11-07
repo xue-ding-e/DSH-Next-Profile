@@ -51,6 +51,12 @@ export function fakeRuntime(fixture, { fail = false, omit = false, disabled = fa
   const execute = async (command, args, options) => {
     calls.push({ command, args, options });
     const path = join(fixture.profile, 'package.json');
+    if (args[1]?.endsWith('initialize.cjs')) {
+      await json(path, { private: true, dependencies: {}, dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] } } });
+      await writeFile(join(fixture.profile, 'cordis.patch.yml'), '[]\n');
+      await writeFile(join(fixture.profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\nnodeLinker: hoisted\n');
+      return { stdout: '', stderr: '' };
+    }
     const manifest = JSON.parse(await readFile(path, 'utf8'));
     if (args.includes('add')) {
       if (fail) throw new Error('fixture pnpm failed with exit 17');

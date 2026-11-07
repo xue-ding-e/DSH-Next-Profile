@@ -5,7 +5,7 @@ export function execute(command, args, { env = process.env, cwd, inherit = false
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       env, cwd, windowsHide: true, shell: false,
-      stdio: inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'],
+      stdio: inherit === 'stderr' ? ['ignore', process.stderr, process.stderr] : inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
     let stderr = '';

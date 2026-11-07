@@ -28,7 +28,8 @@ try {
     path.join(root, 'resources', 'runtime', 'primary-runtime', 'dependencies', 'pnpm', 'bin', 'pnpm.mjs')]) {
     if (!fs.statSync(file).isFile()) throw new Error(`Missing installed runtime file: ${file}`);
   }
-  console.log(JSON.stringify({ version: runtime.release.version, arch: runtime.arch }));
+  console.log(JSON.stringify({ version: runtime.release.version, arch: runtime.arch,
+    applicationVersion: manifest.version ?? null }));
 } catch (error) {
   console.error(error.stack || error.message);
   process.exitCode = 1;

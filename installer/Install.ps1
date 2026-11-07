@@ -7,6 +7,7 @@ try {
     $forward = New-Object 'System.Collections.Generic.List[string]'
     for ($i = 0; $i -lt $args.Count; $i++) {
         switch -Regex ($args[$i]) {
+            '^(install|check|doctor|features)$' { $forward.Add($args[$i]) }
             '^(--host|-HostKind)$' {
                 $i++
                 if ($i -ge $args.Count -or $args[$i] -notin @('original','next')) { throw '--host must be original or next.' }
@@ -30,8 +31,10 @@ try {
             '^(--check|-Check)$' { $forward.Add('--check') }
             '^(--dry-run|-DryRun)$' { $forward.Add('--dry-run') }
             '^(--isolated|-Isolated)$' { $forward.Add('--isolated') }
+            '^(--json|-Json)$' { $forward.Add('--json') }
+            '^(--match-baseline|-MatchBaseline)$' { $forward.Add('--match-baseline') }
             '^(--help|-Help|-h)$' {
-                Write-Host 'Install.cmd [--host original|next] [--app-dir <desktop installation>] [--home <host data directory>] [--check | --dry-run]'
+                Write-Host 'Install.cmd [install|check|doctor|features] [--host original|next] [--app-dir <desktop installation>] [--home <host data directory>] [--check | --dry-run] [--json]'
                 exit 0
             }
             default { throw "Unknown installer option: $($args[$i])" }
@@ -75,7 +78,9 @@ try {
     Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
     Remove-Item Env:NODE_PATH -ErrorAction SilentlyContinue
     Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
-    Write-Host '请先完全退出所选应用（包括托盘），插件安装后需要重新启动客户端。'
+    if (-not $forward.Contains('doctor') -and -not $forward.Contains('features')) {
+        [Console]::Error.WriteLine('请先完全退出所选应用（包括托盘），插件安装后需要重新启动客户端。')
+    }
     & $node $entry '--host' $hostKind '--app-dir' $appDir @forward
     exit $LASTEXITCODE
 } catch {

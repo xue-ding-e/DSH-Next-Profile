@@ -1,7 +1,7 @@
 import { chmod, copyFile, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { archiveFilename, confinedPath, readJson, sha256, validateManifest, within } from '../src/manifest.mjs';
+import { archiveFilename, confinedPath, readJson, sha256, validateFeatureMatrix, validateManifest, within } from '../src/manifest.mjs';
 import { cleanEnvironment, execute } from '../src/process.mjs';
 import { powershell } from '../src/runtime.mjs';
 import { assertPublicFile, copyPublicFile, inspectPluginArchive, npm, packPlugin, root, unpackLockedArchive } from './pack-tools.mjs';
@@ -62,13 +62,22 @@ export async function buildRelease({ repository = root, manifestPath = join(repo
     for (const directory of ['src', 'installer']) await copyTree(repository, stage, directory);
     for (const file of ['README.md', 'README.zh.md', 'LICENSE']) await copyPublicFile(repository, stage, file);
     await mkdir(join(stage, 'profile'));
-    const releaseManifest = { schemaVersion: 1, plugins };
+    const releaseManifest = { schemaVersion: 1, plugins, ...(manifest.baseline ? { baseline: manifest.baseline } : {}) };
     if (compatibility) {
       const bytes = await readFile(compatibility);
       validateCompatibility(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/u, '')), plugins);
       assertPublicFile('profile/compatibility.json', bytes);
       await writeFile(join(stage, 'profile', 'compatibility.json'), bytes);
       releaseManifest.compatibility = { path: 'profile/compatibility.json', sha256: await sha256(join(stage, 'profile', 'compatibility.json')) };
+    }
+    try {
+      const bytes = await readFile(join(repository, 'profile', 'feature-matrix.json'));
+      validateFeatureMatrix(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/u, '')), plugins);
+      assertPublicFile('profile/feature-matrix.json', bytes);
+      await writeFile(join(stage, 'profile', 'feature-matrix.json'), bytes);
+      releaseManifest.featureMatrix = { path: 'profile/feature-matrix.json', sha256: await sha256(join(stage, 'profile', 'feature-matrix.json')) };
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
     }
     await writeFile(join(stage, 'profile', 'manifest.json'), `${JSON.stringify(releaseManifest, null, 2)}\n`);
     const { scripts, devDependencies, private: privatePackage, ...metadata } = packageMetadata;

@@ -41,6 +41,7 @@ export async function inspectRuntime(appDir, host) {
   const result = await execute(executable, ['--expose-internals', join(source, 'runtime-probe.cjs'), root, host], { env });
   const metadata = JSON.parse(result.stdout.trim());
   return { root, executable, node, host, product: identity.product, version: metadata.version,
+    applicationVersion: metadata.applicationVersion,
     cli: join(root, 'resources', 'app.asar', ...identity.cli) };
 }
 
