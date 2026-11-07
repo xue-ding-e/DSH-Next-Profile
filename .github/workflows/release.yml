@@ -97,7 +97,7 @@ jobs:
             -Headers $headers -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($releasePayload))
           foreach ($asset in $assets) {
             $uploadBase = $release.upload_url -replace '\{\?.*$',''
-            $uploadUri = "$uploadBase?name=$([uri]::EscapeDataString($asset.Name))"
+            $uploadUri = "${uploadBase}?name=$([uri]::EscapeDataString($asset.Name))"
             Invoke-RestMethod -Method Post -Uri $uploadUri -Headers $headers -ContentType 'application/octet-stream' -InFile $asset.FullName | Out-Null
           }
           Write-Host "Created $($release.html_url) with $($assets.Count) assets."
