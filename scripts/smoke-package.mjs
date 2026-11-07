@@ -51,12 +51,14 @@ export async function smokePackage(directory) {
   }
   if (lock.compatibility) {
     const path = await confinedPath(directory, lock.compatibility.path);
-    if (await sha256(path) !== lock.compatibility.sha256) throw new Error('Compatibility record SHA-256 mismatch.');
+    const digest = await sha256(path);
+    if (digest !== lock.compatibility.sha256) throw new Error(`Compatibility record SHA-256 mismatch: ${path} expected=${lock.compatibility.sha256} actual=${digest}`);
     validateCompatibility(await readJson(path), lock.plugins);
   }
   if (lock.featureMatrix) {
     const path = await confinedPath(directory, lock.featureMatrix.path);
-    if (await sha256(path) !== lock.featureMatrix.sha256) throw new Error('Feature matrix SHA-256 mismatch.');
+    const digest = await sha256(path);
+    if (digest !== lock.featureMatrix.sha256) throw new Error(`Feature matrix SHA-256 mismatch: ${path} expected=${lock.featureMatrix.sha256} actual=${digest}`);
     validateFeatureMatrix(await readJson(path), lock.plugins);
   }
   const metadata = await readJson(join(directory, 'package.json'));
