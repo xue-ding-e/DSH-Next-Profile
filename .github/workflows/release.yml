@@ -24,7 +24,7 @@ jobs:
           node-version: '26.13.0'
           package-manager-cache: false
       - name: Test installer behavior
-        run: node --test tests/*.test.mjs
+        run: pnpm test
       - name: Verify thin package inputs
         run: node scripts/smoke-package.mjs --directory .
       - name: Assemble full installer from locked public plugin assets

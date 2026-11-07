@@ -14,7 +14,7 @@ The frozen v0.1.0 candidate has completed a real isolated Next smoke: the instal
 
 ## Install on a new computer
 
-1. Install **DSH Next** to reproduce the source-owned Next features, or official DeepSeek Harness for the external plugin subset, then fully quit it, including its tray icon. Closing the window alone may leave the application running. The 0.2.0 CLI initializes a pristine profile through the installed Host's own initializer; an incomplete existing profile still needs recovery by opening Desktop once.
+1. Install **DSH Next** to reproduce the source-owned Next features, or official DeepSeek Harness for the external plugin subset, then fully quit it, including its tray icon. Closing the window alone may leave the application running. The 0.2.1 CLI initializes a pristine profile through the installed Host's own initializer; an incomplete existing profile still needs recovery by opening Desktop once.
 2. Download the Windows ZIP from this repository's Releases and extract the entire ZIP into a local folder. Keep `Install.cmd`, `installer/`, `src/`, `profile/` and `artifacts/` together. Do not run it inside the ZIP viewer.
 3. Double-click `Install.cmd`. Installation may download ordinary runtime dependencies from the npm registry, so network access can be required even though all nine plugin archives are included.
 4. Wait for verification of nine dependencies and nine selected bundles, then restart the selected desktop client. A missing login, PAT, OAuth authorization, browser binding or video file requires separate setup below.
@@ -59,12 +59,12 @@ pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/down
 
 Use the URL for the actual published release/version. Add `--host original` or `--host next` to select a host. The CLI also supports `--app-dir`, `--home`, `--manifest`, `--check` and `--dry-run`. The tgz can either include local plugin archives or use exact public URL/SHA-256 locks; URL mode downloads those archives without account credentials before installing. The ZIP workflow uses only application-bundled tools. GitHub source archives are not prebuilt Windows installers.
 
-The 0.2.0 build adds `install`, `check`, `doctor` and `features` commands. Before publication, copy the built tgz to the new computer and use its local path; after publication, the same `--package` argument can be its immutable release URL:
+The 0.2.1 build adds `install`, `check`, `doctor` and `features` commands. Before publication, copy the built tgz to the new computer and use its local path; after publication, the same `--package` argument can be its immutable release URL:
 
 ```powershell
-pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.0.tgz" dsh-next-profile install --host next --match-baseline
-pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.0.tgz" dsh-next-profile doctor --host next --match-baseline --json
-pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.0.tgz" dsh-next-profile features --json
+pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.1.tgz" dsh-next-profile install --host next --match-baseline
+pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.1.tgz" dsh-next-profile doctor --host next --match-baseline --json
+pnpm dlx --package="C:\Downloads\dsh-next-profile-0.2.1.tgz" dsh-next-profile features --json
 ```
 
 `profile/manifest.json` records an exact skeleton baseline as well as plugin versions and SHA-256 hashes. `--match-baseline` refuses a different host, runtime version or installed application version before profile writes. `doctor` includes `baselineMatches` alongside package status. This pins installed code, not accounts, browser identity, conversations or appearance preferences. New-machine OAuth/PAT authorization, BSK installation/binding and local media remain the setup actions listed above.
