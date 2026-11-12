@@ -8,24 +8,19 @@ param(
 )
 
 function Get-DshProfileReleaseAssets {
-    param($Release)
-    if ($Release.draft -or $Release.prerelease -or $Release.tag_name -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {
-        throw 'GitHub did not return a stable Profile release.'
+    param([string]$ReleaseUrl)
+    if ($ReleaseUrl -cnotmatch '^https://github\.com/xue-ding-e/DSH-Next-Profile/releases/tag/(v[0-9]+\.[0-9]+\.[0-9]+)$') {
+        throw 'GitHub did not redirect to a stable Profile release.'
     }
-    $version = $Release.tag_name.Substring(1)
+    $tag = $Matches[1]
+    $version = $tag.Substring(1)
     $archiveName = "dsh-next-profile-$version-windows.zip"
-    $archive = @($Release.assets | Where-Object { $_.name -ceq $archiveName -and $_.state -eq 'uploaded' })
-    $checksums = @($Release.assets | Where-Object { $_.name -ceq 'SHA256SUMS' -and $_.state -eq 'uploaded' })
-    if ($archive.Count -ne 1 -or $checksums.Count -ne 1) {
-        throw "Release $($Release.tag_name) is incomplete: expected $archiveName and SHA256SUMS."
+    $prefix = "https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/$tag/"
+    return @{
+        Tag = $tag
+        Archive = @{ name = $archiveName; browser_download_url = "$prefix$archiveName" }
+        Checksums = @{ name = 'SHA256SUMS'; browser_download_url = "${prefix}SHA256SUMS" }
     }
-    $prefix = "https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/$($Release.tag_name)/"
-    foreach ($asset in @($archive[0], $checksums[0])) {
-        if ($asset.browser_download_url -cne "$prefix$($asset.name)") {
-            throw 'The release asset URL does not belong to the selected Profile release.'
-        }
-    }
-    return @{ Archive = $archive[0]; Checksums = $checksums[0] }
 }
 
 function Assert-DshProfileChecksum {
@@ -49,14 +44,15 @@ function Invoke-DshProfileLatest {
     )
     $ErrorActionPreference = 'Stop'
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'Desktop installation requires Windows.' }
-    $headers = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'DSH-Next-Profile'; 'Cache-Control' = 'no-cache' }
-    # Resolve once, then use immutable URLs so a new release cannot mix archive and checksum versions.
-    $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/xue-ding-e/DSH-Next-Profile/releases/latest' -Headers $headers -TimeoutSec 60
-    $assets = Get-DshProfileReleaseAssets $release
+    $headers = @{ 'User-Agent' = 'DSH-Next-Profile'; 'Cache-Control' = 'no-cache' }
+    # Public release redirects avoid the anonymous REST API quota. Resolve once so archive and checksum use the same tag.
+    $latest = Invoke-WebRequest -UseBasicParsing -Method Head -Uri 'https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest' -Headers $headers -TimeoutSec 60
+    $releaseUrl = if ($latest.BaseResponse.ResponseUri) { $latest.BaseResponse.ResponseUri.AbsoluteUri } else { $latest.BaseResponse.RequestMessage.RequestUri.AbsoluteUri }
+    $assets = Get-DshProfileReleaseAssets $releaseUrl
     $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("dsh-next-profile-" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $tempRoot | Out-Null
     try {
-        Write-Host "DSH Next Profile $($release.tag_name): $Command (host=$HostKind)"
+        Write-Host "DSH Next Profile $($assets.Tag): $Command (host=$HostKind)"
         $archivePath = Join-Path $tempRoot $assets.Archive.name
         Invoke-WebRequest -UseBasicParsing -Uri $assets.Archive.browser_download_url -Headers $headers -OutFile $archivePath -TimeoutSec 180 | Out-Null
         $checksumResponse = Invoke-WebRequest -UseBasicParsing -Uri $assets.Checksums.browser_download_url -Headers $headers -TimeoutSec 60

@@ -58,10 +58,7 @@ test('the documented pnpm command fetches changed bytes behind the same latest a
 });
 
 function release(version) {
-  const names = ['dsh-next-profile-' + version + '-windows.zip', 'SHA256SUMS'];
-  return { tag_name: 'v' + version, draft: false, prerelease: false,
-    assets: names.map(name => ({ name, state: 'uploaded',
-      browser_download_url: 'https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v' + version + '/' + name })) };
+  return { html_url: 'https://github.com/xue-ding-e/DSH-Next-Profile/releases/tag/v' + version };
 }
 
 async function latestFixture(t) {
@@ -79,14 +76,15 @@ async function latestFixture(t) {
   await writeFile(driver, '\uFEFF' + [
     "$ErrorActionPreference = 'Stop'",
     '. $env:DSH_LATEST_SCRIPT',
-    'function Invoke-RestMethod {',
-    '  param($Uri, $Headers, $TimeoutSec)',
-    '  Add-Content -LiteralPath $env:DSH_LATEST_REQUESTS -Value $Uri',
-    '  return (Get-Content -Raw -LiteralPath $env:DSH_LATEST_METADATA | ConvertFrom-Json)',
-    '}',
     'function Invoke-WebRequest {',
-    '  param($Uri, $Headers, $OutFile, $TimeoutSec, [switch]$UseBasicParsing)',
+    '  param($Uri, $Headers, $OutFile, $TimeoutSec, $Method, [switch]$UseBasicParsing)',
     '  Add-Content -LiteralPath $env:DSH_LATEST_REQUESTS -Value $Uri',
+    '  if ($Uri -match "api.github.com") { throw "The bootstrap must not consume the anonymous REST API quota." }',
+    '  if ($Method -eq "Head") {',
+    '    $release = Get-Content -Raw -LiteralPath $env:DSH_LATEST_METADATA | ConvertFrom-Json',
+    '    if ($env:DSH_LATEST_PS7_RESPONSE) { return @{ BaseResponse = @{ RequestMessage = @{ RequestUri = [uri]$release.html_url } } } }',
+    '    return @{ BaseResponse = @{ ResponseUri = [uri]$release.html_url } }',
+    '  }',
     '  if ($OutFile) {',
     '    [IO.File]::WriteAllText($env:DSH_LATEST_TEMP, (Split-Path -Parent $OutFile))',
     '    Copy-Item -LiteralPath $env:DSH_LATEST_ZIP -Destination $OutFile',
@@ -110,7 +108,7 @@ test('latest bootstrap resolves each stable release anew, verifies its archive a
   for (const version of ['1.2.3', '1.2.4']) {
     await json(f.env.DSH_LATEST_METADATA, release(version));
     await writeFile(f.env.DSH_LATEST_SUMS, f.checksum + '  dsh-next-profile-' + version + '-windows.zip\n');
-    const result = await run(f);
+    const result = await run(f, version === '1.2.4' ? { DSH_LATEST_PS7_RESPONSE: '1' } : {});
     assert.match(result.stdout, new RegExp('DSH Next Profile v' + version.replaceAll('.', '\\.')));
     assert.deepEqual(JSON.parse(await readFile(f.env.DSH_LATEST_ARGS, 'utf8')), [
       'doctor', '--host', 'original', '--app-dir', 'C:/Program Files/Host', '--home', 'C:/data 中文', '--match-baseline',
@@ -124,12 +122,11 @@ test('latest bootstrap resolves each stable release anew, verifies its archive a
   assert.match(requests, /download\/v1\.2\.4\/SHA256SUMS/u);
 });
 
-test('latest bootstrap rejects incomplete, preview and foreign release assets before downloading', windows, async t => {
+test('latest bootstrap rejects missing, preview and foreign release redirects before downloading', windows, async t => {
   const f = await latestFixture(t);
-  const preview = { ...release('1.2.3'), prerelease: true };
-  const incomplete = { ...release('1.2.3'), assets: [] };
-  const foreign = release('1.2.3');
-  foreign.assets[0].browser_download_url = 'https://example.test/installer.zip';
+  const preview = release('1.2.3-rc.1');
+  const incomplete = {};
+  const foreign = { html_url: 'https://example.test/releases/tag/v1.2.3' };
   for (const metadata of [preview, incomplete, foreign]) {
     await json(f.env.DSH_LATEST_METADATA, metadata);
     await assert.rejects(run(f), /stable Profile release|incomplete|does not belong/u);
