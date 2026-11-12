@@ -26,6 +26,7 @@ export async function npm(args, cwd) {
 export async function pnpm(args, cwd) {
   const candidates = [
     process.env.PNPM_CLI_PATH,
+    /(?:^|[\\/])pnpm\.(?:cjs|mjs|js)$/u.test(process.env.npm_execpath ?? '') ? process.env.npm_execpath : undefined,
     ...(process.env.PNPM_HOME === undefined ? [] : [
       join(process.env.PNPM_HOME, 'pnpm.cjs'),
       join(process.env.PNPM_HOME, 'pnpm.mjs'),
@@ -33,6 +34,8 @@ export async function pnpm(args, cwd) {
       join(process.env.PNPM_HOME, 'node_modules', 'pnpm', 'bin', 'pnpm.mjs'),
     ]),
     ...((process.env.PATH ?? '').split(delimiter).filter(Boolean).flatMap(directory => [
+      join(directory, '..', 'pnpm', 'bin', 'pnpm.cjs'),
+      join(directory, '..', 'pnpm', 'bin', 'pnpm.mjs'),
       join(directory, 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
       join(directory, 'node_modules', 'pnpm', 'bin', 'pnpm.mjs'),
     ])),

@@ -22,7 +22,7 @@ test('release publication uploads stable aliases and checksums before making the
     'installer/Install-Latest.ps1': 'bootstrap script',
   };
   for (const [name, value] of Object.entries(files)) await writeFile(join(root, name), value);
-  const workflow = await readFile(join(repository, '.github/workflows/release.yml'), 'utf8');
+  const workflow = (await readFile(join(repository, '.github/workflows/release.yml'), 'utf8')).replaceAll('\r\n', '\n');
   const step = workflow.split('      - name: Create GitHub Release')[1];
   const script = step.split('        run: |\n')[1].split('\n').map(line => line.replace(/^ {10}/u, '')).join('\n');
   const driver = join(root, 'publish.ps1');

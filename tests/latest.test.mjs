@@ -4,12 +4,26 @@ import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, execute } from '../src/process.mjs';
 import { powershell } from '../src/runtime.mjs';
 import { fixture, json, repository } from './fixtures.mjs';
 import { npm, pnpm } from '../scripts/pack-tools.mjs';
 
 const windows = { skip: process.platform !== 'win32' };
+
+test('package smoke finds the launching pnpm without a global shim or PNPM_HOME', {
+  skip: !/(?:^|[\\/])pnpm\.(?:cjs|mjs|js)$/u.test(process.env.npm_execpath ?? ''),
+}, async t => {
+  const root = await fixture(t);
+  const moduleUrl = pathToFileURL(join(repository, 'scripts', 'pack-tools.mjs')).href;
+  const code = 'import { pnpm } from ' + JSON.stringify(moduleUrl)
+    + '; process.stdout.write((await pnpm(["--version"], process.cwd())).stdout);';
+  const env = Object.fromEntries(Object.entries(cleanEnvironment()).filter(([key]) =>
+    !/^(?:path|pnpm_home|pnpm_cli_path)$/iu.test(key)));
+  const result = await execute(process.execPath, ['--input-type=module', '--eval', code], { cwd: root, env: { ...env, PATH: '' } });
+  assert.match(result.stdout.trim(), /^\d+\.\d+\.\d+(?:-.+)?$/u);
+});
 
 test('the documented pnpm command fetches changed bytes behind the same latest asset URL', { timeout: 60_000 }, async t => {
   const root = await fixture(t);
