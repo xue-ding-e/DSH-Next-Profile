@@ -13,7 +13,7 @@ test('environment removes Node hooks without mutating the caller', () => {
 });
 
 test('Windows PowerShell 5.1 scripts preserve BOM and parse correctly', { skip: process.platform !== 'win32' }, async () => {
-  for (const name of ['Install.ps1', 'Find-DshNext.ps1', 'New-ReleaseZip.ps1']) {
+  for (const name of ['Install.ps1', 'Install-Latest.ps1', 'Find-DshNext.ps1', 'New-ReleaseZip.ps1']) {
     const path = join(repository, 'installer', name);
     assert.equal((await readFile(path)).subarray(0, 3).toString('hex'), 'efbbbf');
     const result = await execute(powershell(), ['-NoProfile', '-NonInteractive', '-Command',

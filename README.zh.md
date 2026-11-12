@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-为 Windows 上**已安装的官方 DeepSeek Harness 原版或 DSH Next 桌面版**补齐 9 个个人扩展。下载并完整解压 Windows Release ZIP，双击 `Install.cmd`。安装器使用所选应用自带的 Node、Electron 和 pnpm；系统 PowerShell 5.1 即可运行，无需在新电脑另外安装 Node、pnpm 或 Git。
+为 Windows 上**已安装的官方 DeepSeek Harness 原版或 DSH Next 桌面版**补齐 9 个个人扩展。[一条命令安装器](#一条命令安装最新版)自动选择最新正式版 Profile，并使用所选应用自带的 Node、Electron 和 pnpm。Windows PowerShell 5.1 即可执行，不需要另外安装 Node、pnpm 或 Git。
 
 本仓库仅维护版本锁和安装器。插件源码在独立的 [DSH-Next-Plugins](https://github.com/xue-ding-e/DSH-Next-Plugins) 或各自上游仓库维护。Release ZIP 只包含安装器和预构建插件 tgz，不包含 Harness 本体或 Harness 源码树。
 
@@ -14,7 +14,7 @@
 
 ## 在新电脑安装
 
-1. 要复现源码功能，请安装 **DSH Next**；官方 DeepSeek Harness 可安装外置插件子集。安装后完全退出应用，包括托盘中的进程，只关窗口可能仍在后台运行。0.2.10 CLI 通过安装包自带的初始化函数创建空白 Profile；不完整的既有 Profile 仍需先打开客户端恢复。
+1. 要复现源码功能，请安装 **DSH Next**；官方 DeepSeek Harness 可安装外置插件子集。安装后完全退出应用，包括托盘中的进程，只关窗口可能仍在后台运行。CLI 通过安装包自带的初始化函数创建空白 Profile；不完整的既有 Profile 仍需先打开客户端恢复。
 2. 从本仓库 Releases 下载 Windows ZIP，完整解压到本地目录。`Install.cmd`、`installer/`、`src/`、`profile/`、`artifacts/` 必须放在一起，不要在压缩包预览窗口中直接运行。
 3. 双击 `Install.cmd`。9 个插件 tgz 已随包附带，普通运行依赖仍可能需要从 npm registry 下载，因此安装时可能需要网络。
 4. 出现已核对 9 个依赖和 9 个 bundle 的提示后，重新启动所选客户端。登录、PAT、OAuth、浏览器绑定和视频资源需按下表单独配置。
@@ -48,24 +48,34 @@ Install.cmd --host next --app-dir "C:\Apps\DSH Next" --home "C:\Data\dsh-next"
 
 `dsh-nav-buttons` 的原生鼠标 AppCommand 导航依赖 `globalThis.dshDesktop.protocolVersion === 1` 和 `dshDesktop.navigation.subscribe`。原版宿主若缺少该 IPC，只能使用插件的 DOM 鼠标事件回退；安装器不会宣称原生导航已通过验证。Browser control 需要提供 `executeJavaScript`、`loadURL` 的 Electron 侧栏 webview；收集的实现缺少受支持的公开 preload 截图接口，因此截图动作不可用，可按需使用 snapshot/read_text。这些限制单独报告，不阻塞 Next 的代码安装；原版具体具备哪些 GUI 能力仍需真实宿主验收。
 
-## pnpm dlx 入口
+## 一条命令安装最新版
 
-已有 Node 24.9+ 和 pnpm 的电脑，可以用包含 manifest 和本地归档的**构建后 Release tgz**，无需注册表发布或账号令牌。已发布的 v0.1.0 安装器使用原有 flags CLI；使用这个旧发行前先启动客户端一次以初始化 Profile：
-
-```powershell
-pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.1.0/dsh-next-profile-0.1.0.tgz" dsh-next-profile --check
-pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.1.0/dsh-next-profile-0.1.0.tgz" dsh-next-profile
-```
-
-请按实际发布版本替换下载 URL，并用 `--host original` 或 `--host next` 选择宿主。CLI 还支持 `--app-dir`、`--home`、`--manifest`、`--check` 和 `--dry-run`。tgz 可附带本地插件归档，也可使用精确的公开 URL/SHA-256 锁，在安装时匿名下载并验哈希。ZIP 方式只使用应用内置工具。GitHub 自动生成的源码压缩包不是预构建 Windows 安装包。
-
-0.2.10 构建新增 `install`、`check`、`doctor` 和 `features` 命令。CI 创建正式 Release 后，匹配的 DSH Next 安装可以使用下面的一键安装命令：
+完全退出 DSH Next（包括托盘）后，在 **Windows PowerShell** 中执行下面这一行。可以从任意目录执行，安装过程在 DSH 的 GUI 聊天窗口外进行：
 
 ```powershell
-pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.2.10/dsh-next-profile-0.2.10.tgz" dsh-next-profile install --host next --match-baseline
+irm https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/Install-Latest.ps1 | iex
 ```
 
-发布前可将 URL 换成 `C:\Downloads\dsh-next-profile-0.2.10.tgz` 来验证本地构建包。使用同一个 URL 加上 `doctor --host next --match-baseline --json` 可读取已停止或正在运行的安装状态；加上 `features --json` 可在不启动 Desktop、不访问网络的情况下读取功能归属。
+默认执行宿主 `next` 的 `install`。每次运行都会查询 GitHub 最新正式版，选择该版不可变的 ZIP 和校验文件 URL，验证 SHA-256 后执行包内的 `Install.ps1`。下载文件是临时文件，已安装的插件归档保留在所选桌面 Profile 中。验证成功后重新启动 DSH Next。以后要安装新版本，仍执行同一行；它不会安装后台更新器，也不会升级 DSH 桌面程序本身。
+
+使用官方原版、自定义目录、只读诊断或精确基线匹配时，可下载脚本并传入选项：
+
+```powershell
+Invoke-WebRequest https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/Install-Latest.ps1 -OutFile Install-Latest.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Install-Latest.ps1 -HostKind next -Command doctor -MatchBaseline
+```
+
+脚本支持 `-HostKind next|original`、`-AppDir`、`-HomeDirectory`、`-Command install|check|doctor|features` 和 `-MatchBaseline`。官方原版必须显式传入 `-HostKind original`。也可手动下载[最新版 Windows ZIP](https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/dsh-next-profile-windows.zip)，完整解压后按上文运行 `Install.cmd`。
+
+### pnpm 备选入口
+
+已有 Node 24.9+ 和 pnpm 的电脑，可使用下面固定名称的完整包。缓存选项让每次运行都重新解析 dlx 包；普通 dlx 默认会将命令缓存 24 小时。无需发布 npm 注册表，也不需要 GitHub 账号令牌：
+
+```powershell
+pnpm --config.dlx-cache-max-age=0 dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/dsh-next-profile.tgz" dsh-next-profile install --host next
+```
+
+CLI 支持 `install`、`check`、`doctor`、`features`、`--app-dir`、`--home`、`--manifest`、`--dry-run`、`--json` 和 `--match-baseline`。需要复现旧版本时使用带版本号的资产 URL；验证本地候选包时使用构建后 tgz 的路径。GitHub 自动生成的源码压缩包不是预构建安装包。
 
 `profile/manifest.json` 除插件版本和 SHA-256 外，还记录精确的骨架基线。`--match-baseline` 在写 Profile 前拒绝宿主种类、运行时版本或安装版应用版本不一致的情况；`doctor` 在包状态旁报告 `baselineMatches`。这锁定安装的代码，不复制账号、浏览器身份、会话或外观偏好。新电脑的 OAuth/PAT 授权、BSK 安装与绑定、本地视频仍按上表配置。
 

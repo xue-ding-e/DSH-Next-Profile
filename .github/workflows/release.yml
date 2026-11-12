@@ -44,6 +44,7 @@ jobs:
             .output/full/*.tgz
             .output/full/SHA256SUMS
             .output/thin/*.tgz
+            installer/Install-Latest.ps1
             profile/manifest.json
             profile/compatibility.json
             profile/feature-matrix.json
@@ -67,7 +68,9 @@ jobs:
           }
           $copyPlan = @(
             $fullFiles | ForEach-Object { [pscustomobject]@{ Source = $_.FullName; AssetName = $_.Name } }
-            [pscustomobject]@{ Source = (Get-Item -LiteralPath '.output/full/SHA256SUMS').FullName; AssetName = 'SHA256SUMS' }
+            [pscustomobject]@{ Source = ($fullFiles | Where-Object Extension -eq '.tgz').FullName; AssetName = 'dsh-next-profile.tgz' }
+            [pscustomobject]@{ Source = ($fullFiles | Where-Object Extension -eq '.zip').FullName; AssetName = 'dsh-next-profile-windows.zip' }
+            [pscustomobject]@{ Source = (Get-Item -LiteralPath 'installer/Install-Latest.ps1').FullName; AssetName = 'Install-Latest.ps1' }
             $thinFiles | ForEach-Object { [pscustomobject]@{ Source = $_.FullName; AssetName = "$($_.BaseName)-thin$($_.Extension)" } }
             [pscustomobject]@{ Source = (Get-Item -LiteralPath 'profile/manifest.json').FullName; AssetName = 'manifest.json' }
             [pscustomobject]@{ Source = (Get-Item -LiteralPath 'profile/compatibility.json').FullName; AssetName = 'compatibility.json' }
@@ -80,6 +83,11 @@ jobs:
           if ($assets.Count -ne $copyPlan.Count -or (@($copyPlan.AssetName | Sort-Object -Unique).Count -ne $copyPlan.Count) -or (@($assets.Name | Sort-Object -Unique).Count -ne $assets.Count)) {
             throw "Release asset names are incomplete or duplicated in $releaseDir"
           }
+          $checksums = @($assets | ForEach-Object {
+            "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"
+          }) -join "`n"
+          [IO.File]::WriteAllText((Join-Path $releaseDir 'SHA256SUMS'), "$checksums`n", [Text.UTF8Encoding]::new($false))
+          $assets = @(Get-ChildItem -LiteralPath $releaseDir -File | Sort-Object Name)
           $headers = @{
             Accept = 'application/vnd.github+json'
             Authorization = "Bearer $env:GITHUB_TOKEN"
@@ -90,7 +98,7 @@ jobs:
             target_commitish = $env:GITHUB_SHA
             name = "DSH Next Profile $env:GITHUB_REF_NAME"
             body = "Automated DSH Next Profile release from $env:GITHUB_SHA. Verify SHA256SUMS before installation."
-            draft = $false
+            draft = $true
             prerelease = $false
           } | ConvertTo-Json
           $release = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases" `
@@ -100,4 +108,7 @@ jobs:
             $uploadUri = "${uploadBase}?name=$([uri]::EscapeDataString($asset.Name))"
             Invoke-RestMethod -Method Post -Uri $uploadUri -Headers $headers -ContentType 'application/octet-stream' -InFile $asset.FullName | Out-Null
           }
+          # Keep /releases/latest on the previous complete installer until every asset is uploaded.
+          Invoke-RestMethod -Method Patch -Uri $release.url -Headers $headers -ContentType 'application/json' `
+            -Body ([Text.Encoding]::UTF8.GetBytes('{"draft":false,"make_latest":"true"}')) | Out-Null
           Write-Host "Created $($release.html_url) with $($assets.Count) assets."

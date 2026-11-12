@@ -2,7 +2,7 @@
 
 [中文说明](README.zh.md)
 
-Install nine personal extensions into an **installed official DeepSeek Harness or DSH Next desktop application on Windows**. Download and extract the Windows Release ZIP, then double-click `Install.cmd`. The installer uses the selected application's bundled Node, Electron and pnpm; Windows PowerShell 5.1 is sufficient. A system installation of Node, pnpm or Git is unnecessary for the ZIP workflow.
+Install nine personal extensions into an **installed official DeepSeek Harness or DSH Next desktop application on Windows**. The [one-command installer](#one-command-latest-install) selects the latest stable Profile release automatically and uses the selected application’s bundled Node, Electron and pnpm. Windows PowerShell 5.1 is sufficient; no separate Node, pnpm or Git installation is required.
 
 This is a thin version-lock and installer repository. Plugin source is maintained in [DSH-Next-Plugins](https://github.com/xue-ding-e/DSH-Next-Plugins) or its upstream repositories. Release ZIPs include only the installer and prebuilt plugin tgz files; they contain no Harness application or Harness source tree.
 
@@ -14,7 +14,7 @@ The frozen v0.1.0 candidate has completed a real isolated Next smoke: the instal
 
 ## Install on a new computer
 
-1. Install **DSH Next** to reproduce the source-owned Next features, or official DeepSeek Harness for the external plugin subset, then fully quit it, including its tray icon. Closing the window alone may leave the application running. The 0.2.10 CLI initializes a pristine profile through the installed Host's own initializer; an incomplete existing profile still needs recovery by opening Desktop once.
+1. Install **DSH Next** to reproduce the source-owned Next features, or official DeepSeek Harness for the external plugin subset, then fully quit it, including its tray icon. Closing the window alone may leave the application running. The CLI initializes a pristine profile through the installed Host's own initializer; an incomplete existing profile still needs recovery by opening Desktop once.
 2. Download the Windows ZIP from this repository's Releases and extract the entire ZIP into a local folder. Keep `Install.cmd`, `installer/`, `src/`, `profile/` and `artifacts/` together. Do not run it inside the ZIP viewer.
 3. Double-click `Install.cmd`. Installation may download ordinary runtime dependencies from the npm registry, so network access can be required even though all nine plugin archives are included.
 4. Wait for verification of nine dependencies and nine selected bundles, then restart the selected desktop client. A missing login, PAT, OAuth authorization, browser binding or video file requires separate setup below.
@@ -48,24 +48,34 @@ The installer checks code installation and bundle selection. It does not log int
 
 Native mouse AppCommand navigation in `dsh-nav-buttons` requires `globalThis.dshDesktop.protocolVersion === 1` and `dshDesktop.navigation.subscribe`. An original host lacking that IPC only gets the plugin's DOM pointer fallback; the installer does not certify native navigation. Browser control requires an Electron sidebar webview exposing `executeJavaScript` and `loadURL`. Its screenshot action has no supported public preload API and is unavailable in the collected implementation; use snapshot/read_text as appropriate. These feature limitations are reported separately from code installation and do not block Next installation. A real original-host GUI acceptance run is still required to establish its available features.
 
-## pnpm dlx entry
+## One-command latest install
 
-For a computer that already has Node 24.9 or later and pnpm, consume the **built release tgz**, including its manifest and local archives. A registry publication or account token is unnecessary. The published v0.1.0 installer is available with its original flag-only CLI; start Desktop once to initialize its profile before using that older release:
-
-```powershell
-pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.1.0/dsh-next-profile-0.1.0.tgz" dsh-next-profile --check
-pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.1.0/dsh-next-profile-0.1.0.tgz" dsh-next-profile
-```
-
-Use the URL for the actual published release/version. Add `--host original` or `--host next` to select a host. The CLI also supports `--app-dir`, `--home`, `--manifest`, `--check` and `--dry-run`. The tgz can either include local plugin archives or use exact public URL/SHA-256 locks; URL mode downloads those archives without account credentials before installing. The ZIP workflow uses only application-bundled tools. GitHub source archives are not prebuilt Windows installers.
-
-The 0.2.10 build adds `install`, `check`, `doctor` and `features` commands. After the CI-created release is available, this is the one-command installation path for a matching DSH Next installation:
+Fully quit DSH Next, including its tray icon, then run this line in **Windows PowerShell**. The working directory does not matter. Installation runs outside the DSH GUI chat:
 
 ```powershell
-pnpm dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/download/v0.2.10/dsh-next-profile-0.2.10.tgz" dsh-next-profile install --host next --match-baseline
+irm https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/Install-Latest.ps1 | iex
 ```
 
-Before publication, replace the package URL with `C:\Downloads\dsh-next-profile-0.2.10.tgz` to validate a locally built package. Use the same URL with `doctor --host next --match-baseline --json` to inspect a stopped or running installation, or with `features --json` to read the feature classification without Desktop or network access.
+The default is `install` for host `next`. Every invocation queries GitHub’s latest stable release, selects that release’s immutable ZIP and checksum URLs, verifies SHA-256, and runs its `Install.ps1`. Downloaded files are temporary; installed plugin archives remain in the selected desktop profile. Restart DSH Next when verification succeeds. Run the same line again to install a newer release; it does not install a background updater or update the DSH desktop application.
+
+For original Harness, a custom directory, read-only diagnosis or exact baseline matching, download the script and pass its options:
+
+```powershell
+Invoke-WebRequest https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/Install-Latest.ps1 -OutFile Install-Latest.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Install-Latest.ps1 -HostKind next -Command doctor -MatchBaseline
+```
+
+The script accepts `-HostKind next|original`, `-AppDir`, `-HomeDirectory`, `-Command install|check|doctor|features` and `-MatchBaseline`. Original Harness requires an explicit `-HostKind original`. For a manual workflow, download the [latest Windows ZIP](https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/dsh-next-profile-windows.zip), extract it completely, then run `Install.cmd` as described above.
+
+### pnpm alternative
+
+Computers with Node 24.9+ and pnpm can use the stable full-package asset below. The cache option forces a new dlx resolution on every invocation; ordinary dlx caches a command for 24 hours. No npm registry publication or GitHub account token is needed:
+
+```powershell
+pnpm --config.dlx-cache-max-age=0 dlx --package="https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/dsh-next-profile.tgz" dsh-next-profile install --host next
+```
+
+The CLI supports `install`, `check`, `doctor`, `features`, `--app-dir`, `--home`, `--manifest`, `--dry-run`, `--json` and `--match-baseline`. For a reproducible older release, use its versioned asset URL; for a local candidate, use its built tgz path. GitHub’s generated source archives are not prebuilt installers.
 
 `profile/manifest.json` records an exact skeleton baseline as well as plugin versions and SHA-256 hashes. `--match-baseline` refuses a different host, runtime version or installed application version before profile writes. `doctor` includes `baselineMatches` alongside package status. This pins installed code, not accounts, browser identity, conversations or appearance preferences. New-machine OAuth/PAT authorization, BSK installation/binding and local media remain the setup actions listed above.
 
