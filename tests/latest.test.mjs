@@ -135,13 +135,13 @@ test('latest bootstrap rejects missing, preview and foreign release redirects be
   await assert.rejects(readFile(f.env.DSH_LATEST_ARGS), { code: 'ENOENT' });
 });
 
-test('the PowerShell one-liner defaults to installing Next without requiring an exact desktop baseline', windows, async t => {
+test('downloaded script bytes run as PowerShell input with the default Next install options', windows, async t => {
   const f = await latestFixture(t);
   await json(f.env.DSH_LATEST_METADATA, release('1.2.3'));
   await writeFile(f.env.DSH_LATEST_SUMS, f.checksum + '  dsh-next-profile-1.2.3-windows.zip\n');
   const driver = await readFile(f.driver, 'utf8');
   await writeFile(f.driver, driver.replace(/^Invoke-DshProfileLatest .*$/mu,
-    '[IO.File]::ReadAllText($env:DSH_LATEST_SCRIPT) | Invoke-Expression'));
+    '[Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($env:DSH_LATEST_SCRIPT)) | Invoke-Expression'));
   await run(f);
   assert.deepEqual(JSON.parse(await readFile(f.env.DSH_LATEST_ARGS, 'utf8')), ['install', '--host', 'next']);
 });

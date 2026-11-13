@@ -12,10 +12,12 @@ test('environment removes Node hooks without mutating the caller', () => {
   assert.equal(original.NODE_OPTIONS, '--require attacker');
 });
 
-test('Windows PowerShell 5.1 scripts preserve BOM and parse correctly', { skip: process.platform !== 'win32' }, async () => {
+test('Windows PowerShell 5.1 parses localized scripts and the ASCII download entry point', { skip: process.platform !== 'win32' }, async () => {
   for (const name of ['Install.ps1', 'Install-Latest.ps1', 'Find-DshNext.ps1', 'New-ReleaseZip.ps1']) {
     const path = join(repository, 'installer', name);
-    assert.equal((await readFile(path)).subarray(0, 3).toString('hex'), 'efbbbf');
+    const bytes = await readFile(path);
+    if (name === 'Install-Latest.ps1') assert.equal(bytes.every(byte => byte < 128), true);
+    else assert.equal(bytes.subarray(0, 3).toString('hex'), 'efbbbf');
     const result = await execute(powershell(), ['-NoProfile', '-NonInteractive', '-Command',
       '$tokens=$null; $errors=$null; [void][Management.Automation.Language.Parser]::ParseFile($env:DSH_TEST_PS_FILE,[ref]$tokens,[ref]$errors); if($errors.Count) { $errors | ForEach-Object { [Console]::Error.WriteLine($_.Message) }; exit 1 }'],
     { env: { ...cleanEnvironment(), DSH_TEST_PS_FILE: path } });

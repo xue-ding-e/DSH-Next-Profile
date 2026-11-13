@@ -53,7 +53,7 @@ Install.cmd --host next --app-dir "C:\Apps\DSH Next" --home "C:\Data\dsh-next"
 完全退出 DSH Next（包括托盘）后，在 **Windows PowerShell** 中执行下面这一行。可以从任意目录执行，安装过程在 DSH 的 GUI 聊天窗口外进行：
 
 ```powershell
-irm https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/Install-Latest.ps1 | iex
+$d = Join-Path ([IO.Path]::GetTempPath()) ('dsh-profile-' + [guid]::NewGuid().ToString('N') + '.ps1'); try { Invoke-WebRequest -UseBasicParsing 'https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/Install-Latest.ps1' -OutFile $d -ErrorAction Stop; powershell.exe -NoProfile -ExecutionPolicy Bypass -File $d } finally { Remove-Item -LiteralPath $d -ErrorAction SilentlyContinue }
 ```
 
 默认执行宿主 `next` 的 `install`。每次运行都会查询 GitHub 最新正式版，选择该版不可变的 ZIP 和校验文件 URL，验证 SHA-256 后执行包内的 `Install.ps1`。下载文件是临时文件，已安装的插件归档保留在所选桌面 Profile 中。验证成功后重新启动 DSH Next。以后要安装新版本，仍执行同一行；它不会安装后台更新器，也不会升级 DSH 桌面程序本身。

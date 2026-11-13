@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 param(
     [ValidateSet('next', 'original')][string]$HostKind = 'next',
     [ValidateSet('install', 'check', 'doctor', 'features')][string]$Command = 'install',

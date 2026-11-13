@@ -53,7 +53,7 @@ Native mouse AppCommand navigation in `dsh-nav-buttons` requires `globalThis.dsh
 Fully quit DSH Next, including its tray icon, then run this line in **Windows PowerShell**. The working directory does not matter. Installation runs outside the DSH GUI chat:
 
 ```powershell
-irm https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/Install-Latest.ps1 | iex
+$d = Join-Path ([IO.Path]::GetTempPath()) ('dsh-profile-' + [guid]::NewGuid().ToString('N') + '.ps1'); try { Invoke-WebRequest -UseBasicParsing 'https://github.com/xue-ding-e/DSH-Next-Profile/releases/latest/download/Install-Latest.ps1' -OutFile $d -ErrorAction Stop; powershell.exe -NoProfile -ExecutionPolicy Bypass -File $d } finally { Remove-Item -LiteralPath $d -ErrorAction SilentlyContinue }
 ```
 
 The default is `install` for host `next`. Every invocation queries GitHub’s latest stable release, selects that release’s immutable ZIP and checksum URLs, verifies SHA-256, and runs its `Install.ps1`. Downloaded files are temporary; installed plugin archives remain in the selected desktop profile. Restart DSH Next when verification succeeds. Run the same line again to install a newer release; it does not install a background updater or update the DSH desktop application.
