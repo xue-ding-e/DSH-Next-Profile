@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { execute, cleanEnvironment } from '../src/process.mjs';
 import { archiveFilename, confinedPath, portablePath, readJson } from '../src/manifest.mjs';
 import { downloadArchive } from '../src/archives.mjs';
+import { powershell } from '../src/runtime.mjs';
 import { assertNoSecrets } from './release-safety.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,8 +23,17 @@ export async function npm(args, cwd) {
   return execute(process.execPath, [cli, ...args], { cwd, env: { ...cleanEnvironment(), npm_config_cache: join(root, 'scripts', '.work', 'npm-cache'), npm_config_update_notifier: 'false', npm_config_audit: 'false' }, timeout: 120_000 });
 }
 
+/** Preserve explicit transport configuration; Windows can supply its normal route for public downloads. */
+export async function resolvePnpmProxyEnvironment(url, env, readProxy) {
+  const target = new URL(url);
+  if (['localhost', '[::1]'].includes(target.hostname) || /^127(?:\.\d+){3}$/u.test(target.hostname)
+    || Object.entries(env).some(([key, value]) => value && /^(?:(?:https?|all)_proxy|npm_config_(?:https?_)?proxy)$/iu.test(key))) return env;
+  const proxy = await readProxy();
+  return proxy ? { ...env, HTTPS_PROXY: proxy } : env;
+}
+
 /** Run the user-facing package runner for local published-artifact smoke tests. */
-export async function pnpm(args, cwd) {
+export async function pnpm(args, cwd, { env = process.env, label = 'pnpm package runner' } = {}) {
   const candidates = [
     process.env.PNPM_CLI_PATH,
     /(?:^|[\\/])pnpm\.(?:cjs|mjs|js)$/u.test(process.env.npm_execpath ?? '') ? process.env.npm_execpath : undefined,
@@ -48,8 +58,24 @@ export async function pnpm(args, cwd) {
     catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
   if (!cli) throw new Error('Build requires pnpm (set PNPM_CLI_PATH or add pnpm to PATH).');
+  let environment = cleanEnvironment(env);
+  const target = args.map(value => value.replace(/^--package=/u, '')).find(value => /^https?:\/\//u.test(value));
+  if (process.platform === 'win32' && target) {
+    environment = await resolvePnpmProxyEnvironment(target, environment, async () => {
+      for (const setting of ['https-proxy', 'proxy']) {
+        const result = await execute(process.execPath, [cli, 'config', 'get', setting], {
+          cwd, env: environment, label: 'read pnpm transport configuration',
+        });
+        if (!['', 'undefined', 'null'].includes(result.stdout.trim())) return undefined;
+      }
+      const result = await execute(powershell(), ['-NoProfile', '-NonInteractive', '-Command',
+        '$ErrorActionPreference="Stop"; $uri=[uri]$env:DSH_PROFILE_PACKAGE_URL; $proxy=[Net.WebRequest]::GetSystemWebProxy().GetProxy($uri); if($proxy.AbsoluteUri -ne $uri.AbsoluteUri){[Console]::Write($proxy.AbsoluteUri)}'],
+      { env: { ...environment, DSH_PROFILE_PACKAGE_URL: target }, label: 'read Windows package download proxy' });
+      return result.stdout.trim() || undefined;
+    });
+  }
   return execute(process.execPath, [cli, ...args], {
-    cwd, env: { ...cleanEnvironment(), npm_config_update_notifier: 'false', npm_config_audit: 'false' }, timeout: 120_000,
+    cwd, env: { ...environment, npm_config_update_notifier: 'false', npm_config_audit: 'false' }, timeout: 120_000, label,
   });
 }
 

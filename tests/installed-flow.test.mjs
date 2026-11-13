@@ -36,7 +36,7 @@ test('packaged CLI installs a pristine home, verifies nine bundles and repeats w
   for (const directory of [user, env.APPDATA, env.LOCALAPPDATA]) await mkdir(directory, { recursive: true });
   const command = action => execute(runtime.node, [join(release, 'src', 'cli.mjs'), action,
     '--host', 'next', '--app-dir', app, '--home', home, '--isolated', '--json'],
-  { env, cwd: root, timeout: 150_000 });
+  { env, cwd: root, timeout: 150_000, label: `installed Profile ${action}` });
   const installed = JSON.parse((await command('install')).stdout);
   assert.equal(installed.codeInstalled, true);
   assert.equal(installed.changed, true);
@@ -53,8 +53,10 @@ test('packaged CLI installs a pristine home, verifies nine bundles and repeats w
   assert.equal(diagnosed.rows.every(row => row.enabled && row.installed), true);
   assert.equal(diagnosed.guiVerified, false);
   if (process.env.DSH_PROFILE_TEST_PUBLIC_PACKAGE) {
-    const published = await pnpm(['dlx', '--package', process.env.DSH_PROFILE_TEST_PUBLIC_PACKAGE,
-      'dsh-next-profile', '--host', 'next', '--app-dir', app, '--home', home, '--isolated', '--check'], root);
+    const published = await pnpm(['--config.dlx-cache-max-age=0', '--config.cache-dir=' + join(root, 'pnpm-cache'),
+      '--config.store-dir=' + join(root, 'pnpm-store'), 'dlx', '--package', process.env.DSH_PROFILE_TEST_PUBLIC_PACKAGE,
+      'dsh-next-profile', '--host', 'next', '--app-dir', app, '--home', home, '--isolated', '--check'], root,
+    { env, label: 'published Profile cold-cache check' });
     assert.match(published.stdout, /installed=true, bundle=true/u);
     assert.deepEqual(await readFile(metadata), before);
     t.diagnostic('Published npm exec package verified the same private installed plugin set.');

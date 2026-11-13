@@ -87,7 +87,7 @@ CLI 支持 `install`、`check`、`doctor`、`features`、`--app-dir`、`--home`�
 
 安装器在写入前逐个核验 tgz 的 SHA-256，manifest 路径经过链接解析后仍必须位于发布目录内。归档缓存到 `profiles/desktop/.extension-pack/artifacts/`，因此删除下载目录不会破坏 profile 中的本地依赖引用。
 
-实际安装调用受支持的安装版 CLI：`dsh plugin --profile desktop add <缓存中的本地 tgz 路径>`，只在子进程中设置正确的 `DSH_HOME`。Next 子进程还会设置 `DSH_NEXT_HOME`；原版子进程会移除 Next 专用变量。安装器尊重桌面 profile 的 `lock` 和 `package.json.lock`，不删除残留锁、不终止应用进程。合集内原先禁用的 bundle 会通过安装版自己的写锁和原子写入方法启用，保留其他 profile 选择。
+实际安装调用受支持的安装版 CLI：`dsh plugin --profile desktop add <缓存中的本地 tgz 路径>`，只在子进程中设置正确的 `DSH_HOME`。Next 子进程还会设置 `DSH_NEXT_HOME`；原版子进程会移除 Next 专用变量。安装器尊重桌面 profile 的 `lock` 和 `package.json.lock`，不删除残留锁、不终止正在运行的桌面宿主。合集内原先禁用的 bundle 会通过安装版自己的写锁和原子写入方法启用，保留其他 profile 选择。
 
 同一发布版本已有成功回执，且依赖、版本和 bundle 均匹配时，重复执行不会重新安装。失败返回非 0，保留 `profiles/desktop/.plugin-manager/logs/` 下的 CLI 诊断；按错误提示处理、完全退出所选宿主后重试。残留锁或包管理运行记录需通过对应宿主或其受支持的 plugin CLI 恢复，不能删除仍在运行的操作所持有的锁。失败可能留下下载的模块或缓存归档，重启前可用 `--check` 验证。
 
@@ -142,3 +142,5 @@ node scripts/smoke-package.mjs --directory .output/full-v0.1.0/package
 完整构建的 `profile/manifest.json` 包含 `schemaVersion: 1`，为每个选定插件记录 `name`、精确 `version`、`archive`（例如 `artifacts/dsh-browser-control-1.0.0.tgz`）和小写十六进制 `sha256`，不记录绝对源码路径。Windows ZIP 与完整 npm tgz 都包含发布 manifest、`src/`、`installer/`、LICENSE 和清单中全部插件 tgz；ZIP 根还包含 `Install.cmd`。薄 npm 包则保留公开 URL 锁，安装时下载归档。输出目录的 `SHA256SUMS` 列出外层产物哈希。哈希用于检测相对于 manifest 的文件变化，并非发布者签名，请从可信发布来源下载整包。
 
 测试使用 Node 内置 `node:test` 和可丢弃的隔离夹具，覆盖哈希与路径拒绝、双宿主目录隔离、首次初始化、锁、CLI 参数及环境、失败返回、幂等、bundle 核验、个人数据拒绝、公开 URL 锁和真实 pnpm/npm 打包。设置 `DSH_NEXT_TEST_APP_DIR` 为真实 Next 安装目录，还可用一次性 profile 夹具核验其 Electron 探测、安装版原子写入和 PowerShell 退出状态检查，不会停止正在运行的客户端。测试不验证 provider 已可用，也不能替代两种真实宿主的隔离 profile 安装验收。
+
+公开包冒烟测试使用独立的 pnpm 缓存、存储和夹具用户环境。Windows 上未显式配置环境代理或 pnpm 代理时，运行器会为公开下载使用系统代理；回环请求保留直连路径。命令超时会保留操作名称与已捕获的输出，终止该命令的进程树，并等待输出管道关闭后再报告失败。
