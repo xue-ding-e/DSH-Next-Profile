@@ -38,7 +38,7 @@ Install.cmd --host next --app-dir "C:\Apps\DSH Next" --home "C:\Data\dsh-next"
 | 插件或集成 | 代码安装完成后仍需处理 |
 | --- | --- |
 | DSH 与订阅 provider | 根据需要登录或分别授权。Antigravity 可能还需要独立配置 OAuth application；未授权不代表插件安装失败。 |
-| Qoder Connect | 在插件配置中填入自己的 Qoder PAT，发布包不包含 PAT。 |
+| Qoder Connect | 配置自己的 Qoder PAT。需要本地脱敏时，在 Magpie 下载隐私过滤模型，并在插件配置中开启 `privacyFilter.enabled`。 |
 | BSK bridge | 使用前在新电脑显式绑定目标浏览器。发布包不得保留旧 browser ID，未绑定时应明确报错，不能静默选择任意浏览器。 |
 | Whale boot | **不包含视频资源，资源待提供**；使用视频功能前需自行配置本地资源。 |
 | Browser control | 新电脑没有旧电脑的网页登录状态，按需登录网站。 |

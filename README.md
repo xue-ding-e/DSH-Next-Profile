@@ -38,7 +38,7 @@ The original host uses `DSH_HOME` or `%USERPROFILE%\.dsh`; Next uses `DSH_NEXT_H
 | Plugin / integration | Setup after code installation |
 | --- | --- |
 | DSH and subscription providers | Sign in or authorize each provider you want to use. Antigravity may require an independently configured OAuth application. Missing authorization does not indicate a failed plugin installation. |
-| Qoder Connect | Supply your own Qoder PAT through the plugin's configuration. The release contains no PAT. |
+| Qoder Connect | Configure your own Qoder PAT. To enable local privacy filtering, download the privacy filter model in Magpie and enable `privacyFilter.enabled` in the plugin configuration. |
 | BSK bridge | Explicitly bind the intended browser on this computer before use. A release must have no old browser ID and must fail clearly while unbound; it must not select an arbitrary browser. |
 | Whale boot | Video resources are **not included** and remain to be supplied locally. Configure resources before using the video feature. |
 | Browser control | Browser login state is local to the new computer. Authenticate to the sites you use. |

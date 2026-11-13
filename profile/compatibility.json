@@ -982,7 +982,7 @@
     },
     {
       "name": "dsh-qoder-connect",
-      "version": "0.6.1",
+      "version": "0.6.2",
       "status": "static-interfaces-matched-runtime-unverified",
       "host": {
         "requiredServices": [
@@ -1020,7 +1020,8 @@
       ],
       "minimumDecoupling": [
         "Keep explicit supported old/new peer ranges tied to source-level adapter tests.",
-        "Keep the Qoder protocol/shim plugin-owned and reuse the installed public PiAiAdapter instead of copying Harness adapter code."
+        "Keep the Qoder protocol/shim plugin-owned and reuse the installed public PiAiAdapter instead of copying Harness adapter code.",
+        "The optional privacy filter uses device-local Magpie assets. The Qoder adapter and protocol suite passed against Next 0.2.2-rc.2."
       ],
       "evidence": [
         {

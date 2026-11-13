@@ -57,10 +57,10 @@
     },
     {
       "name": "dsh-qoder-connect",
-      "version": "0.6.1",
+      "version": "0.6.2",
       "source": "plugins/dsh-qoder-connect",
-      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.0/dsh-qoder-connect-0.6.1.tgz",
-      "sha256": "9a20784e8ad29b3ff19ed7da63c5d7e0d2f439bc0fa7249eeeba9fd14c489cd8"
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.1/dsh-qoder-connect-0.6.2.tgz",
+      "sha256": "4d44ee556c244eb8062af4d7a9bab6c31c866fbc46b9d32674d290711c28b6a0"
     },
     {
       "name": "dsh-chat-import",
@@ -72,7 +72,7 @@
   ],
   "compatibility": {
     "path": "profile/compatibility.json",
-    "sha256": "b56f2fa97847e8575dae58221420e2305cb6e9d7fb20bf35449b08b286aa05bd"
+    "sha256": "61f8f3bb7eb89ada282a570ab16489ff69181a7dd4d6d97401d5bdd99157a608"
   },
   "featureMatrix": {
     "path": "profile/feature-matrix.json",
