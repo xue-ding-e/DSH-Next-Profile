@@ -28,12 +28,12 @@ export async function diagnose(options, hooks = {}) {
     home, profile, initialized: !absent, codeInstalled: complete(rows), rows, extraBundles,
     sourceFeatures, hostMatchesFeatureSet: release.featureMatrix ? host === release.featureMatrix.fullFeatureHost : null,
     runtimeVerified: false, guiVerified: false,
-    setup: requiredSetup(release.plugins),
+    setup: requiredSetup(release.plugins, release.manifest.bailianMagpie),
   };
 }
 
 /** Machine-specific setup is separate from successful plugin installation. */
-export function requiredSetup(plugins) {
+export function requiredSetup(plugins, bailianMagpie) {
   const setup = {
     'dsh-browser-control': 'Sign in to websites on this computer as needed.',
     'dsh-bsk-bridge': 'Install the BSK CLI and extension, then explicitly bind the intended browser on this computer.',
@@ -41,7 +41,11 @@ export function requiredSetup(plugins) {
     'dsh-qoder-connect': 'Configure a Qoder PAT on this computer.',
     'dsh-plugin-subscriptions': 'Authorize the providers you intend to use; configure OAuth applications when required.',
   };
-  return plugins.filter(plugin => Object.hasOwn(setup, plugin.name)).map(plugin => ({ package: plugin.name, action: setup[plugin.name], verified: false }));
+  const result = plugins.filter(plugin => Object.hasOwn(setup, plugin.name))
+    .map(plugin => ({ package: plugin.name, action: setup[plugin.name], verified: false }));
+  if (bailianMagpie) result.push({ package: 'bailian-magpie', verified: false,
+    action: 'In the local Magpie, authorize Bailian Token Plan, enable the privacy filter and run the gateway on port 3425.' });
+  return result;
 }
 
 export const defaultManifest = fileURLToPath(new URL('../profile/manifest.json', import.meta.url));

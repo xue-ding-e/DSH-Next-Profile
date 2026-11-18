@@ -39,12 +39,15 @@ The original host uses `DSH_HOME` or `%USERPROFILE%\.dsh`; Next uses `DSH_NEXT_H
 | --- | --- |
 | DSH and subscription providers | Sign in or authorize each provider you want to use. Antigravity may require an independently configured OAuth application. Missing authorization does not indicate a failed plugin installation. |
 | Qoder Connect | Configure your own Qoder PAT. To enable local privacy filtering, download the privacy filter model in Magpie and enable `privacyFilter.enabled` in the plugin configuration. |
+| Alibaba Cloud Token Plan · Magpie | Authorize Bailian Token Plan in Magpie, enable its local privacy filter, and run its gateway on `127.0.0.1:3425`. Select `DeepSeek V4.1 Flash 1017` in DSH. |
 | BSK bridge | Explicitly bind the intended browser on this computer before use. A release must have no old browser ID and must fail clearly while unbound; it must not select an arbitrary browser. |
 | Whale boot | Video resources are **not included** and remain to be supplied locally. Configure resources before using the video feature. |
 | Browser control | Browser login state is local to the new computer. Authenticate to the sites you use. |
 | Chat import | Choose local sources yourself after installation; the installer does not import conversations. |
 
-The installer checks code installation and bundle selection. It does not log into providers, test PATs, authorize OAuth applications, bind browsers, download videos, or declare these integrations ready.
+The personal recipe adds the `bailian-magpie` custom model provider for the local Magpie gateway. Installation preserves a provider with the same ID, other providers, and the default model setting. Magpie manages Bailian authorization and privacy filtering on each computer.
+
+The installer verifies plugin code, bundle selection, and the Bailian route configuration. Sign-in, authorization, browser binding, and local resources are managed by their respective integrations.
 
 Native mouse AppCommand navigation in `dsh-nav-buttons` requires `globalThis.dshDesktop.protocolVersion === 1` and `dshDesktop.navigation.subscribe`. An original host lacking that IPC only gets the plugin's DOM pointer fallback; the installer does not certify native navigation. Browser control requires an Electron sidebar webview exposing `executeJavaScript` and `loadURL`. Its screenshot action has no supported public preload API and is unavailable in the collected implementation; use snapshot/read_text as appropriate. These feature limitations are reported separately from code installation and do not block Next installation. A real original-host GUI acceptance run is still required to establish its available features.
 
@@ -89,7 +92,7 @@ Each tgz is checked against the release manifest's SHA-256 before any profile wr
 
 Installation uses the supported installed CLI: `dsh plugin --profile desktop add <cached local tgz paths>`. The selected home is mapped into `DSH_HOME` for that child process; Next also receives `DSH_NEXT_HOME`, while the original host's child has Next-only variables removed. The installer honors both the desktop profile `lock` and `package.json.lock`; it does not delete stale locks or stop an already running desktop host. Existing disabled collection bundles are enabled using the installed runtime's own writer lock and atomic writer. Other profile selections are retained.
 
-Repeating a verified release is a no-op when its successful receipt and installed packages/bundles match. A failed attempt returns a nonzero exit status and preserves CLI diagnostics under `profiles/desktop/.plugin-manager/logs/`. Follow the printed error, fully quit the selected host, and rerun. If a stale lock or package-operation record remains, recover it with that host or its supported plugin CLI before retrying; do not delete a live operation's lock. A failed operation can leave downloaded modules or cached archives, so verify with `--check` before restarting.
+Repeating an installation reuses the plugins when the receipt, packages, and bundles match. It restores the Bailian route if the personal recipe includes it and the route is absent. A failed attempt returns a nonzero exit status and preserves CLI diagnostics under `profiles/desktop/.plugin-manager/logs/`. Follow the printed error, fully quit the selected host, and rerun. Recover stale locks and package-operation records through the selected host or its supported plugin CLI. Use `--check` to verify the result before restarting.
 
 The installer does not read or rewrite account credentials, workspaces or sessions. It writes only plugin package state and its own cache/receipt inside the chosen desktop profile. Keep the printed diagnostic message when reporting a failure; review logs for sensitive provider output before sharing them.
 

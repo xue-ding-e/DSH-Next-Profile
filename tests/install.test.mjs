@@ -66,6 +66,29 @@ test('existing disabled collection bundles are enabled and verified', async t =>
   assert.equal(repair.calls.length, 2);
 });
 
+test('a matching plugin receipt still repairs the Bailian Magpie route', async t => {
+  const f = await installerFixture(t, ['@custom/single-plugin']);
+  await install(options(f), fakeRuntime(f));
+  await json(f.manifest, { schemaVersion: 1, plugins: f.plugins, bailianMagpie: true });
+  const calls = [];
+  let configured = false;
+  const hooks = { ...fakeRuntime(f), execute: async (_command, args) => {
+    assert.ok(args[1].endsWith('bailian-magpie.cjs'));
+    const mode = args.at(-1);
+    calls.push(mode);
+    if (mode === 'inspect') return { stdout: configured ? 'present\n' : 'missing\n' };
+    const state = configured ? 'present\n' : 'added\n';
+    configured = true;
+    return { stdout: state };
+  } };
+  assert.equal((await install({ ...options(f), dryRun: true }, hooks)).changed, false);
+  await assert.rejects(install({ ...options(f), check: true }, hooks), /Bailian Magpie is missing/u);
+  assert.equal((await install(options(f), hooks)).changed, true);
+  assert.equal((await install(options(f), hooks)).changed, false);
+  assert.equal((await install({ ...options(f), check: true }, hooks)).codeInstalled, true);
+  assert.deepEqual(calls, ['inspect', 'inspect', 'install', 'install', 'inspect']);
+});
+
 test('locked profiles are refused without deleting or altering their locks', async t => {
   const f = await installerFixture(t);
   const lock = join(f.profile, 'lock');

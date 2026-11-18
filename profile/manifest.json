@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "bailianMagpie": true,
   "baseline": {
     "host": "next",
     "runtimeVersion": "0.2.2-rc.1",
@@ -57,10 +58,10 @@
     },
     {
       "name": "dsh-qoder-connect",
-      "version": "0.6.2",
+      "version": "0.6.3",
       "source": "plugins/dsh-qoder-connect",
-      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.1/dsh-qoder-connect-0.6.2.tgz",
-      "sha256": "4d44ee556c244eb8062af4d7a9bab6c31c866fbc46b9d32674d290711c28b6a0"
+      "url": "https://github.com/xue-ding-e/DSH-Next-Plugins/releases/download/v0.1.2/dsh-qoder-connect-0.6.3.tgz",
+      "sha256": "18327b27e2c277e45edcf2d86f141b2d597e9e442be7febd2714da778831df43"
     },
     {
       "name": "dsh-chat-import",
@@ -72,7 +73,7 @@
   ],
   "compatibility": {
     "path": "profile/compatibility.json",
-    "sha256": "61f8f3bb7eb89ada282a570ab16489ff69181a7dd4d6d97401d5bdd99157a608"
+    "sha256": "f5dbfefc6086140c445beb970eae265ec11dc33b0a0ca95d4032760b0d8fad1c"
   },
   "featureMatrix": {
     "path": "profile/feature-matrix.json",

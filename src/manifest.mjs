@@ -60,6 +60,9 @@ export function validateManifest(value, mode = 'release') {
   if (value?.schemaVersion !== 1 || !Array.isArray(value.plugins) || value.plugins.length < 1) {
     throw new Error('profile/manifest.json must have schemaVersion 1 and a nonempty plugins list.');
   }
+  if (value.bailianMagpie !== undefined && typeof value.bailianMagpie !== 'boolean') {
+    throw new Error('bailianMagpie must be a boolean.');
+  }
   const names = value.plugins.map(plugin => plugin?.name);
   if (new Set(names).size !== names.length || names.some(name => !packageName(name))) {
     throw new Error('Manifest plugin names must be valid, unique npm package names.');

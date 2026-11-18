@@ -14,9 +14,9 @@ import { requiredSetup } from './diagnose.mjs';
 const source = dirname(fileURLToPath(import.meta.url));
 export const configurationNotice = 'Restart the selected desktop client. Plugin code installation is complete; configure authorizations and local resources required by the installed plugins separately.';
 
-function reportSetup(log, plugins) {
+function reportSetup(log, setup) {
   log(configurationNotice);
-  for (const item of requiredSetup(plugins)) log(`Setup (${item.package}): ${item.action}`);
+  for (const item of setup) log(`Setup (${item.package}): ${item.action}`);
 }
 
 async function persistArchives(profile, plugins) {
@@ -97,11 +97,27 @@ export async function install(options, hooks = {}) {
     : await initializedProfile(home);
   await assertNoLocks(profile);
   const rows = await inspectPlugins(profile, release.plugins);
+  const setup = requiredSetup(release.plugins, release.manifest.bailianMagpie);
+  const configureBailian = async mode => {
+    if (!release.manifest.bailianMagpie) return false;
+    const { stdout } = await run(runtime.executable, ['--expose-internals', join(source, 'bailian-magpie.cjs'),
+      runtime.root, profile, home, mode], { env, cwd: release.root, label: 'Bailian Magpie profile configuration' });
+    const state = stdout.trim();
+    if (state === 'missing') {
+      if (options.check) throw new Error('Bailian Magpie is missing from this profile. Run the installer to add it.');
+      log('Would add Bailian Token Plan via the local Magpie.');
+    } else if (state === 'present' || state === 'added') {
+      log(state === 'added' ? 'Added Bailian Token Plan via the local Magpie.' : 'Bailian Magpie is already configured.');
+    } else {
+      throw new Error('The installed host returned an invalid Bailian Magpie configuration status.');
+    }
+    return state === 'added';
+  };
   const result = (rows, changed) => ({ schemaVersion: 1, host, runtimeVersion: runtime.version,
     applicationVersion: runtime.applicationVersion ?? null,
     baseline: release.manifest.baseline ?? null, baselineMatches,
     home, profile, rows, changed, codeInstalled: complete(rows), runtimeVerified: false, guiVerified: false,
-    setup: requiredSetup(release.plugins) });
+    setup });
   log(`${identity.product} ${runtime.version} (host=${host})\nApplication: ${runtime.root}\nDSH_HOME: ${home}\nProfile: ${profile}\nRelease plugin locks: ${release.plugins.length}`);
   if (baselineMatches === false) log('Skeleton differs from the recorded baseline; package installation does not establish the same complete feature set. Use --match-baseline to require an exact match.');
   reportCompatibility(release.compatibility, release.plugins, host, runtime.version, log);
@@ -112,11 +128,13 @@ export async function install(options, hooks = {}) {
   if (options.check) {
     for (const row of rows) log(`${row.name}: dependency=${row.dependency}, installed=${row.installed}, bundle=${row.enabled}`);
     if (!complete(rows)) throw new Error('The extension collection is incomplete; run the installer without --check to install/repair it.');
-    reportSetup(log, release.plugins);
+    await configureBailian('inspect');
+    reportSetup(log, setup);
     return result(rows, false);
   }
   if (options.dryRun) {
     log(`Dry run: no profile files changed. Would cache ${release.plugins.length} verified archives, run dsh plugin --profile desktop add <cached archives>, enable their bundles, and verify the result.`);
+    await configureBailian('inspect');
     return result(rows, false);
   }
   // The GUI checks this same lock during profile preparation; CLI owns package.json.lock separately.
@@ -136,8 +154,9 @@ export async function install(options, hooks = {}) {
     const recorded = receipt?.schemaVersion === 1 && Array.isArray(receipt.plugins) && release.plugins.every(plugin => receipt.plugins.some(row => row.name === plugin.name && row.version === plugin.version && row.sha256 === plugin.sha256));
     if (recorded && complete(await inspectPlugins(profile, release.plugins)) && await cachedInstallation(profile, release.plugins)) {
       log(`All ${release.plugins.length} extensions and bundles already match this release.`);
-      reportSetup(log, release.plugins);
-      return result(rows, false);
+      const changed = await configureBailian('install');
+      reportSetup(log, setup);
+      return result(rows, changed);
     }
     const { state, paths } = await persistArchives(profile, release.plugins);
     await run(runtime.executable, ['--expose-internals', runtime.cli, 'plugin', '--profile', 'desktop', 'add', ...paths],
@@ -148,9 +167,10 @@ export async function install(options, hooks = {}) {
     }
     const after = await inspectPlugins(profile, release.plugins);
     if (!complete(after)) throw new Error(`Post-install verification failed: ${JSON.stringify(after)}. See ${join(profile, '.plugin-manager', 'logs')}.`);
+    await configureBailian('install');
     await saveReceipt(state, release.plugins);
     log(`Verified: ${release.plugins.length} installed dependencies and ${release.plugins.length} selected dsh.profile.bundles.`);
-    reportSetup(log, release.plugins);
+    reportSetup(log, setup);
     return result(after, true);
   } catch (error) {
     throw new Error(`Installation failed: ${error.message}\nDSH diagnostics: ${join(profile, '.plugin-manager', 'logs')}\nFix the reported error, fully quit ${identity.product}, then rerun. No success receipt was written for this attempt.`, { cause: error });

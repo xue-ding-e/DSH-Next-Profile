@@ -982,11 +982,12 @@
     },
     {
       "name": "dsh-qoder-connect",
-      "version": "0.6.2",
+      "version": "0.6.3",
       "status": "static-interfaces-matched-runtime-unverified",
       "host": {
         "requiredServices": [
-          "llm"
+          "llm",
+          "tools"
         ],
         "optionalServices": [
           "webServer",
@@ -998,6 +999,7 @@
           "PiAiAdapter({profiles, auth, resolveApiKey, resolveAttachments, resolveImageAccess})",
           "resolveImageAttachmentAccess",
           "resolveRetryPolicy",
+          "tools.guard",
           "webServer.register"
         ]
       },
@@ -1021,19 +1023,19 @@
       "minimumDecoupling": [
         "Keep explicit supported old/new peer ranges tied to source-level adapter tests.",
         "Keep the Qoder protocol/shim plugin-owned and reuse the installed public PiAiAdapter instead of copying Harness adapter code.",
-        "The optional privacy filter uses device-local Magpie assets. The Qoder adapter and protocol suite passed against Next 0.2.2-rc.2."
+        "The optional privacy filter reuses the local Magpie model. The Next 0.2.2-rc.2 runtime passed the Qoder adapter tests, including AgentLoop recovery after malformed tool arguments."
       ],
       "evidence": [
         {
           "ref": "plugin",
           "path": "plugins/dsh-qoder-connect/package.json",
-          "line": 43,
+          "line": 41,
           "subject": "Explicit supported old/new DSH peers"
         },
         {
           "ref": "plugin",
           "path": "plugins/dsh-qoder-connect/lib/index.js",
-          "line": 217,
+          "line": 231,
           "subject": "Public PiAiAdapter options"
         },
         {
@@ -1055,11 +1057,11 @@
         "constrainedByDshRanges": true
       },
       "artifacts": {
-        "manifestSha256": "a12d606805956b45d30ad67c4ec5aab1d3a741684ef2b98c09517f6adf93da5b",
-        "runtimeJavaScriptFiles": 5,
-        "runtimeTreeSha256": "d1e290433f17f11552ec7531f2b750c1b0ab10f0dbcf244d979ed2d777329e80",
+        "manifestSha256": "f32f9df28d7cca22b1d70adf0ea5fcdc40e0efe43f4ce5951c053f2fe891c179",
+        "runtimeJavaScriptFiles": 7,
+        "runtimeTreeSha256": "eb8183c71524610a377cd1d82e1b92a343c616e0683cd3d9bc69616a9ba9e3ce",
         "hostEntrypoint": "lib/index.js",
-        "hostEntrypointSha256": "1cbdbcd8d677ee260b51e2fa7dfe7f675f57ec1312208517fa370e9dbbb42610",
+        "hostEntrypointSha256": "c2926a8f08b16cafd87d46ec315944ba35966948fad5c2eb9e98800a1ff41983",
         "runtimeTreeHashAlgorithm": "sha256 over codepoint-sorted package-relative-path LF file-sha256 LF pairs; JavaScript only"
       },
       "runtimeVerification": "not-run",

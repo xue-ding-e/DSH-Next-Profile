@@ -62,7 +62,8 @@ export async function buildRelease({ repository = root, manifestPath = join(repo
     for (const directory of ['src', 'installer']) await copyTree(repository, stage, directory);
     for (const file of ['README.md', 'README.zh.md', 'LICENSE']) await copyPublicFile(repository, stage, file);
     await mkdir(join(stage, 'profile'));
-    const releaseManifest = { schemaVersion: 1, plugins, ...(manifest.baseline ? { baseline: manifest.baseline } : {}) };
+    const releaseManifest = { schemaVersion: 1, plugins, ...(manifest.baseline ? { baseline: manifest.baseline } : {}),
+      ...(manifest.bailianMagpie ? { bailianMagpie: true } : {}) };
     if (compatibility) {
       const bytes = await readFile(compatibility);
       validateCompatibility(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/u, '')), plugins);

@@ -38,13 +38,16 @@ Install.cmd --host next --app-dir "C:\Apps\DSH Next" --home "C:\Data\dsh-next"
 | 插件或集成 | 代码安装完成后仍需处理 |
 | --- | --- |
 | DSH 与订阅 provider | 根据需要登录或分别授权。Antigravity 可能还需要独立配置 OAuth application；未授权不代表插件安装失败。 |
+| 阿里云 Token Plan · Magpie | 在本机 Magpie 授权百炼 Token Plan，启用隐私过滤模型，并保持网关运行在 `127.0.0.1:3425`。在 DSH 模型选择器中选 `DeepSeek V4.1 Flash 1017`。 |
 | Qoder Connect | 配置自己的 Qoder PAT。需要本地脱敏时，在 Magpie 下载隐私过滤模型，并在插件配置中开启 `privacyFilter.enabled`。 |
 | BSK bridge | 使用前在新电脑显式绑定目标浏览器。发布包不得保留旧 browser ID，未绑定时应明确报错，不能静默选择任意浏览器。 |
 | Whale boot | **不包含视频资源，资源待提供**；使用视频功能前需自行配置本地资源。 |
 | Browser control | 新电脑没有旧电脑的网页登录状态，按需登录网站。 |
 | Chat import | 安装后自行选择本地数据源，安装器不会导入聊天记录。 |
 
-安装器仅核验插件代码安装与 bundle 选择，不会登录账号、验证 PAT、授权 OAuth、绑定浏览器、下载视频，也不会把这些集成报告为已经可用。
+个人合集会在 DSH 的自定义模型中加入 `bailian-magpie`，请求由本机 Magpie 转发到百炼。安装器保留同名线路、其他提供商和默认模型设置。百炼套餐密钥由本机 Magpie 管理。已经配好套餐和隐私过滤的电脑可直接选用这条线路。
+
+安装器核验插件代码、bundle 选择和百炼线路配置。登录、授权、浏览器绑定和本地资源由各集成分别处理。
 
 `dsh-nav-buttons` 的原生鼠标 AppCommand 导航依赖 `globalThis.dshDesktop.protocolVersion === 1` 和 `dshDesktop.navigation.subscribe`。原版宿主若缺少该 IPC，只能使用插件的 DOM 鼠标事件回退；安装器不会宣称原生导航已通过验证。Browser control 需要提供 `executeJavaScript`、`loadURL` 的 Electron 侧栏 webview；收集的实现缺少受支持的公开 preload 截图接口，因此截图动作不可用，可按需使用 snapshot/read_text。这些限制单独报告，不阻塞 Next 的代码安装；原版具体具备哪些 GUI 能力仍需真实宿主验收。
 
@@ -89,9 +92,9 @@ CLI 支持 `install`、`check`、`doctor`、`features`、`--app-dir`、`--home`�
 
 实际安装调用受支持的安装版 CLI：`dsh plugin --profile desktop add <缓存中的本地 tgz 路径>`，只在子进程中设置正确的 `DSH_HOME`。Next 子进程还会设置 `DSH_NEXT_HOME`；原版子进程会移除 Next 专用变量。安装器尊重桌面 profile 的 `lock` 和 `package.json.lock`，不删除残留锁、不终止正在运行的桌面宿主。合集内原先禁用的 bundle 会通过安装版自己的写锁和原子写入方法启用，保留其他 profile 选择。
 
-同一发布版本已有成功回执，且依赖、版本和 bundle 均匹配时，重复执行不会重新安装。失败返回非 0，保留 `profiles/desktop/.plugin-manager/logs/` 下的 CLI 诊断；按错误提示处理、完全退出所选宿主后重试。残留锁或包管理运行记录需通过对应宿主或其受支持的 plugin CLI 恢复，不能删除仍在运行的操作所持有的锁。失败可能留下下载的模块或缓存归档，重启前可用 `--check` 验证。
+回执、插件版本和 bundle 均匹配时，重复安装会复用插件，并补齐个人合集中缺失的百炼线路。安装失败时返回非 0，CLI 诊断保存在 `profiles/desktop/.plugin-manager/logs/`。按错误提示处理，完全退出所选宿主后重试。通过对应宿主或其受支持的 plugin CLI 恢复残留锁和包管理记录。重启前可用 `--check` 验证。
 
-安装器不读取或修改账号凭据、workspace 和会话记录，只写入所选桌面 profile 中的插件包状态及安装器缓存、回执。报告问题时保留完整错误提示；转发日志前先检查其中是否含 provider 的敏感输出。
+安装器更新所选桌面 profile 的插件状态、归档缓存和安装回执。百炼线路写入当前定义 `llm-pi-ai` 配置的 Cordis 文件，首次安装写入桌面 profile 的 `cordis.patch.yml`。报告问题时保留完整错误提示，转发日志前检查其中是否含 provider 的敏感输出。
 
 ## 构建发布包
 

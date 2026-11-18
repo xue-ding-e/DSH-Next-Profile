@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { copyFile, link, mkdir, readFile, readdir, symlink } from 'node:fs/promises';
+import { copyFile, link, mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { execute, cleanEnvironment } from '../src/process.mjs';
@@ -42,10 +42,14 @@ test('packaged CLI installs a pristine home, verifies nine bundles and repeats w
   assert.equal(installed.changed, true);
   assert.equal(installed.rows.length, 9);
   const metadata = join(home, 'profiles', 'desktop', 'package.json');
+  const patch = join(home, 'profiles', 'desktop', 'cordis.patch.yml');
+  const patchBefore = await readFile(patch, 'utf8');
+  assert.match(patchBefore, /bailian-magpie:[\s\S]+http:\/\/127\.0\.0\.1:3425\/v1[\s\S]+bailian-token-plan\/deepseek-v4\.1-flash-1017/u);
   const before = await readFile(metadata);
   const repeated = JSON.parse((await command('install')).stdout);
   assert.equal(repeated.changed, false);
   assert.deepEqual(await readFile(metadata), before);
+  assert.equal(await readFile(patch, 'utf8'), patchBefore);
   const checked = JSON.parse((await command('check')).stdout);
   assert.equal(checked.codeInstalled, true);
   const diagnosed = JSON.parse((await command('doctor')).stdout);
@@ -62,6 +66,33 @@ test('packaged CLI installs a pristine home, verifies nine bundles and repeats w
     t.diagnostic('Published npm exec package verified the same private installed plugin set.');
   }
   await bootHost(t, runtime, home, env, root);
+  const userPatch = join(home, 'cordis.patch.yml');
+  const prior = [
+    '# Retain user comments and settings',
+    '- id: agent-default-model',
+    '  config: { provider: fixture, model: custom }',
+    '- id: llm-pi-ai',
+    '  config:',
+    '    providers:',
+    '      fixture:',
+    '        apiKeyEnv: FIXTURE_API_KEY',
+    '        baseURL: !!js "ctx.test"',
+    '',
+  ].join('\n');
+  await writeFile(userPatch, prior);
+  await assert.rejects(command('check'), /Bailian Magpie is missing/u);
+  assert.equal(await readFile(userPatch, 'utf8'), prior);
+  await command('install').then(result => assert.equal(JSON.parse(result.stdout).changed, true));
+  const updated = await readFile(userPatch, 'utf8');
+  assert.match(updated, /^# Retain user comments and settings/mu);
+  assert.match(updated, /config: \{ provider: fixture, model: custom \}/u);
+  assert.match(updated, /apiKeyEnv: FIXTURE_API_KEY\s+baseURL: !!js "ctx\.test"/u);
+  assert.match(updated, /bailian-magpie:/u);
+  assert.equal(await readFile(patch, 'utf8'), patchBefore);
+  const customized = updated.replace('DeepSeek V4.1 Flash 1017', 'Locally named Flash');
+  await writeFile(userPatch, customized);
+  await command('install').then(result => assert.equal(JSON.parse(result.stdout).changed, false));
+  assert.equal(await readFile(userPatch, 'utf8'), customized);
   t.diagnostic(`Real packaged runtime ${runtime.version}: initialized, installed, checked, diagnosed and repeated 9/9.`);
 });
 

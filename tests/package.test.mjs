@@ -73,6 +73,7 @@ test('real npm packages and ZIP include runnable installer and all nine local ar
   const f = await buildFixture(t);
   const recipe = JSON.parse(await readFile(f.manifestPath, 'utf8'));
   recipe.baseline = { host: 'next', runtimeVersion: '1.0.0-rc.1', applicationVersion: '1.0.0-rc.1.20261107.1' };
+  recipe.bailianMagpie = true;
   await json(f.manifestPath, recipe);
   const output = join(f.root, 'output');
   const result = await buildRelease({ repository: f.repo, sources: f.repo, manifestPath: f.manifestPath, output, zip: process.platform === 'win32' });
@@ -86,6 +87,7 @@ test('real npm packages and ZIP include runnable installer and all nine local ar
   assert.ok((await execute(process.execPath, [join(extracted, 'package', 'src', 'cli.mjs'), '--help'])).stdout.includes('--dry-run'));
   const packed = await loadRelease(join(extracted, 'package', 'profile', 'manifest.json'));
   assert.deepEqual(packed.manifest.baseline, recipe.baseline);
+  assert.equal(packed.manifest.bailianMagpie, true);
   const pluginDir = join(f.root, 'plugin');
   await mkdir(pluginDir);
   await execute('tar', ['-xzf', packed.plugins[0].archivePath, '-C', pluginDir]);
@@ -105,7 +107,7 @@ test('real npm packages and ZIP include runnable installer and all nine local ar
   if (result.zip) {
     const zip = await readFile(result.zip);
     assert.equal(zip.subarray(0, 2).toString(), 'PK');
-    for (const name of ['Install.cmd', 'profile/manifest.json', 'src/cli.mjs', ...packed.plugins.map(plugin => plugin.archive)]) {
+    for (const name of ['Install.cmd', 'profile/manifest.json', 'src/cli.mjs', 'src/bailian-magpie.cjs', ...packed.plugins.map(plugin => plugin.archive)]) {
       assert.ok(zip.includes(Buffer.from(name)), `ZIP entry ${name}`);
     }
   }
